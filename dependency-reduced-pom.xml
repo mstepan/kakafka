@@ -9,7 +9,7 @@
       <plugin>
         <groupId>com.diffplug.spotless</groupId>
         <artifactId>spotless-maven-plugin</artifactId>
-        <version>2.37.0</version>
+        <version>${spotless.plugin.version}</version>
         <executions>
           <execution>
             <id>format-sources</id>
@@ -23,7 +23,7 @@
           <java>
             <removeUnusedImports />
             <googleJavaFormat>
-              <version>1.17.0</version>
+              <version>${google.java.format.version}</version>
               <style>AOSP</style>
             </googleJavaFormat>
           </java>
@@ -31,7 +31,7 @@
       </plugin>
       <plugin>
         <artifactId>maven-compiler-plugin</artifactId>
-        <version>3.8.1</version>
+        <version>${compiler.plugin.version}</version>
         <configuration>
           <release>${java.version}</release>
         </configuration>
@@ -52,7 +52,7 @@
             <configuration>
               <transformers>
                 <transformer>
-                  <mainClass>com.github.mstepan.kakafka.Main</mainClass>
+                  <mainClass>com.github.mstepan.kakafka.broker.BrokerMain</mainClass>
                 </transformer>
               </transformers>
             </configuration>
@@ -130,20 +130,23 @@
       <dependency>
         <groupId>org.junit</groupId>
         <artifactId>junit-bom</artifactId>
-        <version>5.5.2</version>
+        <version>${junit.bom.version}</version>
         <type>pom</type>
         <scope>import</scope>
       </dependency>
     </dependencies>
   </dependencyManagement>
   <properties>
-    <error.prone.core.version>2.3.2</error.prone.core.version>
-    <lmax.disruptor.version>3.4.4</lmax.disruptor.version>
+    <google.java.format.version>1.17.0</google.java.format.version>
+    <netty.version>4.1.94.Final</netty.version>
     <java.version>17</java.version>
     <shade.plugin.version>3.4.0</shade.plugin.version>
+    <junit.bom.version>5.5.2</junit.bom.version>
     <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
+    <spotless.plugin.version>2.37.0</spotless.plugin.version>
     <assertj.version>3.15.0</assertj.version>
     <mockito-version>2.21.0</mockito-version>
     <surefire.plugin.version>3.0.0-M4</surefire.plugin.version>
+    <compiler.plugin.version>3.8.1</compiler.plugin.version>
   </properties>
 </project>

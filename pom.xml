@@ -7,13 +7,21 @@
     <version>0.0.1-SNAPSHOT</version>
 
     <properties>
+        <!-- Common -->
+        <java.version>17</java.version>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
 
+        <!-- maven plugins -->
+        <compiler.plugin.version>3.8.1</compiler.plugin.version>
+
+        <spotless.plugin.version>2.37.0</spotless.plugin.version>
+        <google.java.format.version>1.17.0</google.java.format.version>
+
+        <!-- 3rd party dependencies (sorted in alphabetical order) -->
         <assertj.version>3.15.0</assertj.version>
-        <error.prone.core.version>2.3.2</error.prone.core.version>
-        <java.version>17</java.version>
-        <lmax.disruptor.version>3.4.4</lmax.disruptor.version>
+        <junit.bom.version>5.5.2</junit.bom.version>
         <mockito-version>2.21.0</mockito-version>
+        <netty.version>4.1.94.Final</netty.version>
         <surefire.plugin.version>3.0.0-M4</surefire.plugin.version>
         <shade.plugin.version>3.4.0</shade.plugin.version>
     </properties>
@@ -27,12 +35,12 @@ https://github.com/diffplug/spotless/tree/master/plugin-maven -->
             <plugin>
                 <groupId>com.diffplug.spotless</groupId>
                 <artifactId>spotless-maven-plugin</artifactId>
-                <version>2.37.0</version>
+                <version>${spotless.plugin.version}</version>
                 <configuration>
                     <java>
                         <removeUnusedImports/>
                         <googleJavaFormat>
-                            <version>1.17.0</version>
+                            <version>${google.java.format.version}</version>
                             <!-- Optional, available versions: GOOGLE, AOSP
                             https://github.com/google/google-java-format/blob/master/core/src/main/java/com/google/googlejavaformat/java/JavaFormatterOptions.java -->
                             <style>AOSP</style>
@@ -50,23 +58,27 @@ https://github.com/diffplug/spotless/tree/master/plugin-maven -->
                 </executions>
             </plugin>
 
-
             <!-- Java compiler plugin with Error Prone (warnings enabled) -->
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-compiler-plugin</artifactId>
-                <version>3.8.1</version>
+                <version>${compiler.plugin.version}</version>
                 <configuration>
                     <release>${java.version}</release>
                 </configuration>
             </plugin>
 
+            <!-- Unit tests -->
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-surefire-plugin</artifactId>
                 <version>${surefire.plugin.version}</version>
             </plugin>
 
+            <!--
+            Fat executable JAR file
+            https://maven.apache.org/plugins/maven-shade-plugin/
+            -->
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-shade-plugin</artifactId>
@@ -80,7 +92,7 @@ https://github.com/diffplug/spotless/tree/master/plugin-maven -->
                         <configuration>
                             <transformers>
                                 <transformer implementation="org.apache.maven.plugins.shade.resource.ManifestResourceTransformer">
-                                    <mainClass>com.github.mstepan.kakafka.Main</mainClass>
+                                    <mainClass>com.github.mstepan.kakafka.broker.BrokerMain</mainClass>
                                 </transformer>
                             </transformers>
                         </configuration>
@@ -96,7 +108,7 @@ https://github.com/diffplug/spotless/tree/master/plugin-maven -->
             <dependency>
                 <groupId>org.junit</groupId>
                 <artifactId>junit-bom</artifactId>
-                <version>5.5.2</version>
+                <version>${junit.bom.version}</version>
                 <type>pom</type>
                 <scope>import</scope>
             </dependency>
@@ -104,6 +116,12 @@ https://github.com/diffplug/spotless/tree/master/plugin-maven -->
     </dependencyManagement>
 
     <dependencies>
+
+        <dependency>
+            <groupId>io.netty</groupId>
+            <artifactId>netty-all</artifactId>
+            <version>${netty.version}</version>
+        </dependency>
 
         <!-- Test dependencies -->
         <dependency>
