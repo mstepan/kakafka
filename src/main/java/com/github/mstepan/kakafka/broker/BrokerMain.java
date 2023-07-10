@@ -13,8 +13,6 @@ import java.util.concurrent.ThreadLocalRandom;
 public class BrokerMain {
 
     public static void main(String[] args) throws Exception {
-
-
         new BrokerMain().run(getPort());
     }
 
@@ -25,6 +23,7 @@ public class BrokerMain {
             return Integer.parseInt(portAsEnv);
         }
 
+        // generate random port to bind if ENV[BROKER_PORT] is not specified
         return 1024 + ThreadLocalRandom.current().nextInt(1024);
     }
 
@@ -50,7 +49,7 @@ public class BrokerMain {
             serverBindFuture.channel().closeFuture().sync();
 
         } finally {
-            // shutdown event loop group releasing all resoirces
+            // shutdown event loop group releasing all resources
             evenLoopGroup.shutdownGracefully().sync();
         }
     }

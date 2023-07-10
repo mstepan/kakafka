@@ -13,12 +13,38 @@ public class EchoServerHandler extends ChannelInboundHandlerAdapter {
     @Override
     public void channelRead(ChannelHandlerContext ctx, Object msg) {
         ByteBuf data = (ByteBuf) msg;
-        System.out.printf("Server received: %s%n", data.toString(StandardCharsets.UTF_8));
-        ctx.write(data);
+
+        String command = data.toString(StandardCharsets.UTF_8);
+
+        if ("get_metadata".equals(command)) {
+            System.out.println("Retrieving Metadata from Zookeeper");
+            System.out.println("Sending metadata to client");
+
+            ctx.writeAndFlush(Unpooled.copiedBuffer(
+        """
+        {
+            "broker": [
+                {
+                    "id": 1,
+                    "address": "localhost:9091"
+                },
+                {
+                    "id": 2,
+                    "address": "localhost:9092"
+                },
+                {
+                    "id": 3,
+                    "address": "localhost:9093"
+                }
+                ]
+            "leaderId": "2"
+        }
+        """, StandardCharsets.UTF_8));
+        }
     }
 
     @Override
-    public void channelReadComplete(ChannelHandlerContext ctx) throws Exception {
+    public void channelReadComplete(ChannelHandlerContext ctx) {
         ctx.writeAndFlush(Unpooled.EMPTY_BUFFER).addListener(ChannelFutureListener.CLOSE);
     }
 
