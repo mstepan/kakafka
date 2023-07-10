@@ -18,6 +18,7 @@
         <google.java.format.version>1.17.0</google.java.format.version>
 
         <!-- 3rd party dependencies (sorted in alphabetical order) -->
+        <apache.curator.version>5.5.0</apache.curator.version>
         <assertj.version>3.15.0</assertj.version>
         <junit.bom.version>5.5.2</junit.bom.version>
         <mockito-version>2.21.0</mockito-version>
@@ -29,9 +30,11 @@
     <build>
         <plugins>
 
-            <!-- Spotless is a general-purpose formatting plugin. It is completely Ã la carte,
-but also includes powerful "batteries-included" if you opt-in
-https://github.com/diffplug/spotless/tree/master/plugin-maven -->
+            <!--
+            Spotless is a general-purpose formatting plugin. It is completely Ã la carte,
+            but also includes powerful "batteries-included" if you opt-in
+            https://github.com/diffplug/spotless/tree/master/plugin-maven
+            -->
             <plugin>
                 <groupId>com.diffplug.spotless</groupId>
                 <artifactId>spotless-maven-plugin</artifactId>
@@ -121,6 +124,19 @@ https://github.com/diffplug/spotless/tree/master/plugin-maven -->
             <groupId>io.netty</groupId>
             <artifactId>netty-all</artifactId>
             <version>${netty.version}</version>
+        </dependency>
+
+        <!-- Apache Curator to connect to Zookeeper -->
+        <dependency>
+            <groupId>org.apache.curator</groupId>
+            <artifactId>curator-framework</artifactId>
+            <version>${apache.curator.version}</version>
+        </dependency>
+
+        <dependency>
+            <groupId>org.apache.curator</groupId>
+            <artifactId>curator-recipes</artifactId>
+            <version>${apache.curator.version}</version>
         </dependency>
 
         <!-- Test dependencies -->

@@ -7,14 +7,23 @@ import io.netty.channel.ChannelHandler;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.SimpleChannelInboundHandler;
 import java.nio.charset.StandardCharsets;
+import java.util.UUID;
 
 @ChannelHandler.Sharable
 public class EchoServerHandler extends SimpleChannelInboundHandler<ByteBuf> {
+
+    private final UUID serverId;
+
+    public EchoServerHandler(UUID serverId) {
+        this.serverId = serverId;
+    }
 
     @Override
     protected void channelRead0(ChannelHandlerContext ctx, ByteBuf data) throws Exception {
 
         String command = data.toString(StandardCharsets.UTF_8).trim();
+
+        System.out.printf("Server[%s] received: %s%n", serverId.toString(), command);
 
         if ("get_metadata".equals(command)) {
             System.out.println("Retrieving Metadata from Zookeeper");
@@ -45,8 +54,7 @@ public class EchoServerHandler extends SimpleChannelInboundHandler<ByteBuf> {
         } else if ("exit".equals(command)) {
             System.out.println("Disconnecting client");
             ctx.writeAndFlush(Unpooled.EMPTY_BUFFER).addListener(ChannelFutureListener.CLOSE);
-        }
-        else {
+        } else {
             System.err.printf("Unknown command '%s'%n", command);
         }
     }

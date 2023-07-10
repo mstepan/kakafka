@@ -7,11 +7,22 @@
 #REMOTE_DEBUGGER=-agentlib:jdwp=transport=dt_socket,server=y,suspend=n,address=5005
 
 # Print JVM memory details when process exit
-NATIVE_MEMORY_TRACKER="-XX:+UnlockDiagnosticVMOptions -XX:NativeMemoryTracking=summary -XX:+PrintNMTStatistics"
+#NATIVE_MEMORY_TRACKER="-XX:+UnlockDiagnosticVMOptions -XX:NativeMemoryTracking=summary -XX:+PrintNMTStatistics"
 
-java -Dbroker.port=9091 -jar "$(find -E target -regex '.*/kakafka-.*-SNAPSHOT\.jar$')"
+cluster_mode=true
 
-#java -Dbroker.port=9091 -jar "$(find -E target -regex '.*/kakafka-.*-SNAPSHOT\.jar$')" &
-#java -Dbroker.port=9092 -jar "$(find -E target -regex '.*/kakafka-.*-SNAPSHOT\.jar$')" &
-#java -Dbroker.port=9093 -jar "$(find -E target -regex '.*/kakafka-.*-SNAPSHOT\.jar$')" &
+if [ "$cluster_mode" = true ]; then
+    # run 3 broker in background as a cluster
+    echo "Starting cluster with 3 nodes"
+    java -Dbroker.port=9091 -jar "$(find -E target -regex '.*/kakafka-.*-SNAPSHOT\.jar$')" &
+    java -Dbroker.port=9092 -jar "$(find -E target -regex '.*/kakafka-.*-SNAPSHOT\.jar$')" &
+    java -Dbroker.port=9093 -jar "$(find -E target -regex '.*/kakafka-.*-SNAPSHOT\.jar$')" &
+else
+    # run single broker
+    echo "Starting single broker"
+    java -Dbroker.port=9091 -jar "$(find -E target -regex '.*/kakafka-.*-SNAPSHOT\.jar$')"
+fi
+
+
+
 

@@ -141,12 +141,13 @@
     <netty.version>4.1.94.Final</netty.version>
     <java.version>17</java.version>
     <shade.plugin.version>3.4.0</shade.plugin.version>
-    <junit.bom.version>5.5.2</junit.bom.version>
-    <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
+    <apache.curator.version>5.5.0</apache.curator.version>
     <spotless.plugin.version>2.37.0</spotless.plugin.version>
-    <assertj.version>3.15.0</assertj.version>
     <mockito-version>2.21.0</mockito-version>
     <surefire.plugin.version>3.0.0-M4</surefire.plugin.version>
     <compiler.plugin.version>3.8.1</compiler.plugin.version>
+    <junit.bom.version>5.5.2</junit.bom.version>
+    <assertj.version>3.15.0</assertj.version>
+    <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
   </properties>
 </project>

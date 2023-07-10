@@ -8,6 +8,7 @@ import io.netty.channel.nio.NioEventLoopGroup;
 import io.netty.channel.socket.SocketChannel;
 import io.netty.channel.socket.nio.NioServerSocketChannel;
 import java.net.InetSocketAddress;
+import java.util.UUID;
 import java.util.concurrent.ThreadLocalRandom;
 
 public class BrokerMain {
@@ -36,6 +37,9 @@ public class BrokerMain {
     }
 
     public void run(int port) throws Exception {
+
+        final UUID serverId = UUID.randomUUID();
+
         EventLoopGroup evenLoopGroup = new NioEventLoopGroup();
 
         try {
@@ -48,7 +52,7 @@ public class BrokerMain {
                                 @Override
                                 public void initChannel(SocketChannel ch) {
                                     // Add custom handlers
-                                    ch.pipeline().addLast(new EchoServerHandler());
+                                    ch.pipeline().addLast(new EchoServerHandler(serverId));
                                 }
                             });
 
