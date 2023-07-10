@@ -17,7 +17,15 @@ public class BrokerMain {
     }
 
     private static int getPort() {
-        String portAsEnv = System.getenv("BROKER_PORT");
+        // read port value from property
+        String portAsJavaProp = System.getProperty("broker.port");
+
+        if (portAsJavaProp != null) {
+            return Integer.parseInt(portAsJavaProp);
+        }
+
+        // read port value from ENV variable
+        String portAsEnv = System.getProperty("BROKER_PORT");
 
         if (portAsEnv != null) {
             return Integer.parseInt(portAsEnv);

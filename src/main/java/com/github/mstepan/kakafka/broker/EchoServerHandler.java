@@ -5,23 +5,24 @@ import io.netty.buffer.Unpooled;
 import io.netty.channel.ChannelFutureListener;
 import io.netty.channel.ChannelHandler;
 import io.netty.channel.ChannelHandlerContext;
-import io.netty.channel.ChannelInboundHandlerAdapter;
+import io.netty.channel.SimpleChannelInboundHandler;
 import java.nio.charset.StandardCharsets;
 
 @ChannelHandler.Sharable
-public class EchoServerHandler extends ChannelInboundHandlerAdapter {
-    @Override
-    public void channelRead(ChannelHandlerContext ctx, Object msg) {
-        ByteBuf data = (ByteBuf) msg;
+public class EchoServerHandler extends SimpleChannelInboundHandler<ByteBuf> {
 
-        String command = data.toString(StandardCharsets.UTF_8);
+    @Override
+    protected void channelRead0(ChannelHandlerContext ctx, ByteBuf data) throws Exception {
+
+        String command = data.toString(StandardCharsets.UTF_8).trim();
 
         if ("get_metadata".equals(command)) {
             System.out.println("Retrieving Metadata from Zookeeper");
             System.out.println("Sending metadata to client");
 
-            ctx.writeAndFlush(Unpooled.copiedBuffer(
-        """
+            ctx.writeAndFlush(
+                    Unpooled.copiedBuffer(
+                            """
         {
             "broker": [
                 {
@@ -39,13 +40,15 @@ public class EchoServerHandler extends ChannelInboundHandlerAdapter {
                 ]
             "leaderId": "2"
         }
-        """, StandardCharsets.UTF_8));
+        """,
+                            StandardCharsets.UTF_8));
+        } else if ("exit".equals(command)) {
+            System.out.println("Disconnecting client");
+            ctx.writeAndFlush(Unpooled.EMPTY_BUFFER).addListener(ChannelFutureListener.CLOSE);
         }
-    }
-
-    @Override
-    public void channelReadComplete(ChannelHandlerContext ctx) {
-        ctx.writeAndFlush(Unpooled.EMPTY_BUFFER).addListener(ChannelFutureListener.CLOSE);
+        else {
+            System.err.printf("Unknown command '%s'%n", command);
+        }
     }
 
     @Override

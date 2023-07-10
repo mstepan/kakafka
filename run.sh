@@ -9,7 +9,9 @@
 # Print JVM memory details when process exit
 NATIVE_MEMORY_TRACKER="-XX:+UnlockDiagnosticVMOptions -XX:NativeMemoryTracking=summary -XX:+PrintNMTStatistics"
 
-export BROKER_PORT=9091
+java -Dbroker.port=9091 -jar "$(find -E target -regex '.*/kakafka-.*-SNAPSHOT\.jar$')"
 
-java ${REMOTE_DEBUGGER} ${NATIVE_MEMORY_TRACKER} ${JAVA_OPTS} -jar "$(find -E target -regex '.*/kakafka-.*-SNAPSHOT\.jar$')"
+#java -Dbroker.port=9091 -jar "$(find -E target -regex '.*/kakafka-.*-SNAPSHOT\.jar$')" &
+#java -Dbroker.port=9092 -jar "$(find -E target -regex '.*/kakafka-.*-SNAPSHOT\.jar$')" &
+#java -Dbroker.port=9093 -jar "$(find -E target -regex '.*/kakafka-.*-SNAPSHOT\.jar$')" &
 
