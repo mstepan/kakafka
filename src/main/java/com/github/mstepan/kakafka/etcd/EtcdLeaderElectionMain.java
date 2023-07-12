@@ -17,6 +17,8 @@ public class EtcdLeaderElectionMain {
     private static final ByteSequence LEADER_KEY =
             ByteSequence.from("/kakafka/leader", StandardCharsets.UTF_8);
 
+    private static final long LEASE_TTL_IN_SEC = 3L;
+
     public static void main(String[] args) throws Exception {
 
         final String brokerId = getBrokerId();
@@ -27,7 +29,7 @@ public class EtcdLeaderElectionMain {
                 Lease lease = client.getLeaseClient();
                 Election electionClient = client.getElectionClient()) {
 
-            LeaseGrantResponse leaseResp = lease.grant(3).get();
+            LeaseGrantResponse leaseResp = lease.grant(LEASE_TTL_IN_SEC).get();
 
             ByteSequence serverId = ByteSequence.from(brokerId, StandardCharsets.UTF_8);
 
