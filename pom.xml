@@ -126,6 +126,13 @@
             <version>${netty.version}</version>
         </dependency>
 
+        <!-- java etcd(jetcd) client -->
+        <dependency>
+            <groupId>io.etcd</groupId>
+            <artifactId>jetcd-core</artifactId>
+            <version>0.7.5</version>
+        </dependency>
+
         <!-- Apache Curator to connect to Zookeeper -->
         <dependency>
             <groupId>org.apache.curator</groupId>
