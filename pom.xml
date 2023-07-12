@@ -137,22 +137,6 @@
             <version>${jetcd.version}</version>
         </dependency>
 
-        <!--
-        Apache Curator to connect to Zookeeper
-        todo: remove below dependencies after 'etcd' testing leader election
-        -->
-        <dependency>
-            <groupId>org.apache.curator</groupId>
-            <artifactId>curator-framework</artifactId>
-            <version>${apache.curator.version}</version>
-        </dependency>
-
-        <dependency>
-            <groupId>org.apache.curator</groupId>
-            <artifactId>curator-recipes</artifactId>
-            <version>${apache.curator.version}</version>
-        </dependency>
-
         <!-- Test dependencies -->
         <dependency>
             <groupId>org.junit.jupiter</groupId>
