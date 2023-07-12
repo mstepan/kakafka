@@ -138,6 +138,7 @@
   </dependencyManagement>
   <properties>
     <google.java.format.version>1.17.0</google.java.format.version>
+    <jetcd.version>0.7.5</jetcd.version>
     <netty.version>4.1.94.Final</netty.version>
     <java.version>17</java.version>
     <shade.plugin.version>3.4.0</shade.plugin.version>

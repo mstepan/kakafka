@@ -5,6 +5,7 @@
 #
 # etcdctl help
 # etcdctl member list
-# etcdctl get test_key
+# etcdctl get /kakafka/leader
+# etcdctl lease list
 
 docker exec -it etcd-kakafka bash

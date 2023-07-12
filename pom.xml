@@ -20,6 +20,7 @@
         <!-- 3rd party dependencies (sorted in alphabetical order) -->
         <apache.curator.version>5.5.0</apache.curator.version>
         <assertj.version>3.15.0</assertj.version>
+        <jetcd.version>0.7.5</jetcd.version>
         <junit.bom.version>5.5.2</junit.bom.version>
         <mockito-version>2.21.0</mockito-version>
         <netty.version>4.1.94.Final</netty.version>
@@ -126,14 +127,20 @@
             <version>${netty.version}</version>
         </dependency>
 
-        <!-- java etcd(jetcd) client -->
+        <!--
+        java etcd(jetcd) client
+        https://github.com/etcd-io/jetcd
+        -->
         <dependency>
             <groupId>io.etcd</groupId>
             <artifactId>jetcd-core</artifactId>
-            <version>0.7.5</version>
+            <version>${jetcd.version}</version>
         </dependency>
 
-        <!-- Apache Curator to connect to Zookeeper -->
+        <!--
+        Apache Curator to connect to Zookeeper
+        todo: remove below dependencies after 'etcd' testing leader election
+        -->
         <dependency>
             <groupId>org.apache.curator</groupId>
             <artifactId>curator-framework</artifactId>
