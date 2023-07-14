@@ -4,10 +4,14 @@ import io.etcd.jetcd.ByteSequence;
 import io.etcd.jetcd.Client;
 import io.etcd.jetcd.Election;
 import io.etcd.jetcd.KV;
+import io.etcd.jetcd.KeyValue;
 import io.etcd.jetcd.Lease;
+import io.etcd.jetcd.Lock;
 import io.etcd.jetcd.election.LeaderResponse;
+import io.etcd.jetcd.kv.GetResponse;
 import io.etcd.jetcd.lease.LeaseGrantResponse;
 import java.nio.charset.StandardCharsets;
+import java.util.List;
 import java.util.concurrent.TimeUnit;
 
 public class EtcdLeaderElectionMain {
@@ -17,19 +21,26 @@ public class EtcdLeaderElectionMain {
     private static final ByteSequence LEADER_KEY =
             ByteSequence.from("/kakafka/leader", StandardCharsets.UTF_8);
 
+    private static final ByteSequence BROKER_ID_LOCK_KEY =
+            ByteSequence.from("/kakafka/broker/key/lock", StandardCharsets.UTF_8);
+
+    private static final ByteSequence LAST_BROKER_ID_KEY =
+            ByteSequence.from("/kakafka/broker/key/last", StandardCharsets.UTF_8);
+
     private static final long LEASE_TTL_IN_SEC = 3L;
 
     public static void main(String[] args) throws Exception {
-
-        final String brokerId = getBrokerId();
-
-        System.out.printf("'%s' started%n", brokerId);
 
         try (Client client = Client.builder().endpoints(ETCD_ENDPOINT).build();
                 Lease lease = client.getLeaseClient();
                 Election electionClient = client.getElectionClient()) {
 
-            LeaseGrantResponse leaseResp = lease.grant(LEASE_TTL_IN_SEC).get();
+            LeaseGrantResponse leaseResp =
+                    lease.grant(LEASE_TTL_IN_SEC, 3L, TimeUnit.SECONDS).get();
+
+            final String brokerId = generateUniqueBrokerName(client, lease);
+
+            System.out.printf("'%s' started%n", brokerId);
 
             ByteSequence serverId = ByteSequence.from(brokerId, StandardCharsets.UTF_8);
 
@@ -53,35 +64,55 @@ public class EtcdLeaderElectionMain {
                         }
                     });
 
+            // https://github.com/etcd-io/jetcd/blob/main/jetcd-core/src/main/java/io/etcd/jetcd/Election.java
             electionClient.campaign(LEADER_KEY, leaseResp.getID(), serverId);
 
             while (true) {
                 TimeUnit.SECONDS.sleep(1);
+                // https://github.com/etcd-io/jetcd/blob/main/jetcd-core/src/main/java/io/etcd/jetcd/Lease.java
                 lease.keepAliveOnce(leaseResp.getID()).get();
             }
         }
     }
 
-    private static String getBrokerId() {
-        return System.getProperty("broker.id");
-    }
+    private static String generateUniqueBrokerName(Client client, Lease lease) throws Exception {
 
-    private static void addKeyValue(Client client, String key, String value) throws Exception {
-        try (KV kvClient = client.getKVClient()) {
-            ByteSequence keyBytes = ByteSequence.from(key.getBytes());
-            ByteSequence valueBytes = ByteSequence.from(value.getBytes());
+        try (Lock lock = client.getLockClient()) {
 
-            // put the key-value
-            kvClient.put(keyBytes, valueBytes).get();
-        }
-    }
+            LeaseGrantResponse leaseResp =
+                    lease.grant(LEASE_TTL_IN_SEC, 3L, TimeUnit.SECONDS).get();
 
-    private static void deleteKey(Client client, String key) throws Exception {
-        try (KV kvClient = client.getKVClient()) {
-            ByteSequence keyBytes = ByteSequence.from(key.getBytes());
+            lock.lock(BROKER_ID_LOCK_KEY, leaseResp.getID()).get();
+            try {
+                try (KV kv = client.getKVClient()) {
+                    GetResponse keyResp = kv.get(LAST_BROKER_ID_KEY).get();
 
-            // delete key
-            kvClient.delete(keyBytes).get();
+                    if (keyResp.getKvs().isEmpty()) {
+                        kv.put(LAST_BROKER_ID_KEY, ByteSequence.from("1", StandardCharsets.UTF_8))
+                                .get();
+                        return "broker-0";
+                    } else {
+                        List<KeyValue> data = keyResp.getKvs();
+
+                        assert data.size() > 0 : "List<KeyValue> data is empty";
+
+                        String curValAsStr =
+                                data.get(0).getValue().toString(StandardCharsets.UTF_8);
+
+                        int curVal = Integer.parseInt(curValAsStr.trim());
+
+                        kv.put(
+                                        LAST_BROKER_ID_KEY,
+                                        ByteSequence.from(
+                                                String.valueOf(curVal + 1), StandardCharsets.UTF_8))
+                                .get();
+
+                        return "broker-" + curVal;
+                    }
+                }
+            } finally {
+                lock.unlock(BROKER_ID_LOCK_KEY);
+            }
         }
     }
 }
