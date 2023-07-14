@@ -54,13 +54,9 @@ public class BrokerMain {
                     .childHandler(
                             new ChannelInitializer<SocketChannel>() {
                                 @Override
-                                public void initChannel(SocketChannel ch) throws Exception {
+                                public void initChannel(SocketChannel ch)  {
                                     ch.pipeline()
-                                            .addLast(
-                                                    new KakafkaCommandDecoder(),
-                                                    new CommandServerHandler());
-                                    //                                    ch.pipeline().addLast(new
-                                    // TimeEncoder(), new TimeServerHandler());
+                                            .addLast(new TimeEncoder(), new TimeServerHandler());
                                 }
                             })
                     // The number of connections to be queued.

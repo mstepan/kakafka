@@ -30,9 +30,7 @@ public class ClientMain {
             bootstrap.handler(
                     new ChannelInitializer<SocketChannel>() {
                         @Override
-                        public void initChannel(SocketChannel ch) throws Exception {
-                            //                    ch.pipeline().addLast(new
-                            // EchoClientHandler("get_metadata"));
+                        public void initChannel(SocketChannel ch)  {
                             ch.pipeline().addLast(new TimeDecoder(), new TimeClientHandler());
                         }
                     });
