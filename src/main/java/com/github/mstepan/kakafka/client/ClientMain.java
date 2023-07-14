@@ -27,13 +27,15 @@ public class ClientMain {
             bootstrap.group(workerGroup);
             bootstrap.channel(NioSocketChannel.class);
             bootstrap.option(ChannelOption.SO_KEEPALIVE, true);
-            bootstrap.handler(new ChannelInitializer<SocketChannel>() {
-                @Override
-                public void initChannel(SocketChannel ch) throws Exception {
-//                    ch.pipeline().addLast(new EchoClientHandler("get_metadata"));
-                    ch.pipeline().addLast(new TimeClientHandler());
-                }
-            });
+            bootstrap.handler(
+                    new ChannelInitializer<SocketChannel>() {
+                        @Override
+                        public void initChannel(SocketChannel ch) throws Exception {
+                            //                    ch.pipeline().addLast(new
+                            // EchoClientHandler("get_metadata"));
+                            ch.pipeline().addLast(new TimeDecoder(), new TimeClientHandler());
+                        }
+                    });
 
             // Start the client.
             ChannelFuture connectFuture = bootstrap.connect(host, port).sync(); // (5)
@@ -43,6 +45,5 @@ public class ClientMain {
         } finally {
             workerGroup.shutdownGracefully();
         }
-
     }
 }
