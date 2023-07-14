@@ -1,7 +1,6 @@
 package com.github.mstepan.kakafka.client;
 
 import com.github.mstepan.kakafka.dto.UnixTime;
-
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelInboundHandlerAdapter;
 import io.netty.util.ReferenceCountUtil;
