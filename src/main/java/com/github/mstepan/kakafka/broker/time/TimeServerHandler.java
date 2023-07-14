@@ -1,4 +1,4 @@
-package com.github.mstepan.kakafka.broker;
+package com.github.mstepan.kakafka.broker.time;
 
 import com.github.mstepan.kakafka.dto.UnixTime;
 import io.netty.channel.ChannelFuture;

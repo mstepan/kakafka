@@ -12,13 +12,21 @@ public class KakafkaCommand {
         return type;
     }
 
+    public static KakafkaCommand metadataCommand(){
+        return new KakafkaCommand(Type.GET_METADATA);
+    }
+
+    public static KakafkaCommand exitCommand(){
+        return new KakafkaCommand(Type.EXIT);
+    }
+
     public enum Type {
         GET_METADATA(1),
         EXIT(0);
 
         private final int marker;
 
-        public int marker(){
+        public int marker() {
             return marker;
         }
 

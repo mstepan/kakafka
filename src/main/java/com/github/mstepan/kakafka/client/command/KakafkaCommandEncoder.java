@@ -1,8 +1,6 @@
-package com.github.mstepan.kakafka.client;
+package com.github.mstepan.kakafka.client.command;
 
 import com.github.mstepan.kakafka.dto.KakafkaCommand;
-import com.github.mstepan.kakafka.dto.UnixTime;
-
 import io.netty.buffer.ByteBuf;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.handler.codec.MessageToByteEncoder;

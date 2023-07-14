@@ -1,4 +1,4 @@
-package com.github.mstepan.kakafka.client;
+package com.github.mstepan.kakafka.client.time;
 
 import com.github.mstepan.kakafka.dto.UnixTime;
 import io.netty.channel.ChannelHandlerContext;

@@ -55,12 +55,14 @@ public class BrokerMain {
                     .childHandler(
                             new ChannelInitializer<SocketChannel>() {
                                 @Override
-                                public void initChannel(SocketChannel ch)  {
-//                                    ch.pipeline()
-//                                            .addLast(new TimeEncoder(), new TimeServerHandler());
+                                public void initChannel(SocketChannel ch) {
+                                    //                                    ch.pipeline()
+                                    //                                            .addLast(new
+                                    // TimeEncoder(), new TimeServerHandler());
                                     ch.pipeline()
-                                            .addLast(new CommandDecoder(), new CommandServerHandler());
-
+                                            .addLast(
+                                                    new CommandDecoder(),
+                                                    new CommandServerHandler());
                                 }
                             })
                     // The number of connections to be queued.
