@@ -31,12 +31,14 @@ public class ClientMain {
                     new ChannelInitializer<SocketChannel>() {
                         @Override
                         public void initChannel(SocketChannel ch)  {
-                            ch.pipeline().addLast(new TimeDecoder(), new TimeClientHandler());
+//                            ch.pipeline().addLast(new TimeDecoder(), new TimeClientHandler());
+
+                            ch.pipeline().addLast(new KakafkaCommandEncoder(), new SendMetadataRequestHandler());
                         }
                     });
 
             // Start the client.
-            ChannelFuture connectFuture = bootstrap.connect(host, port).sync(); // (5)
+            ChannelFuture connectFuture = bootstrap.connect(host, port).sync();
 
             // Wait until the connection is closed.
             connectFuture.channel().closeFuture().sync();

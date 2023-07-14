@@ -1,4 +1,4 @@
-package com.github.mstepan.kakafka.broker.commands;
+package com.github.mstepan.kakafka.dto;
 
 public class KakafkaCommand {
 
@@ -17,6 +17,10 @@ public class KakafkaCommand {
         EXIT(0);
 
         private final int marker;
+
+        public int marker(){
+            return marker;
+        }
 
         Type(int marker) {
             this.marker = marker;

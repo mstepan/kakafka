@@ -1,6 +1,7 @@
 package com.github.mstepan.kakafka.broker;
 
-import com.github.mstepan.kakafka.broker.commands.KakafkaCommandDecoder;
+import com.github.mstepan.kakafka.broker.command.CommandDecoder;
+import com.github.mstepan.kakafka.broker.command.CommandServerHandler;
 import io.netty.bootstrap.ServerBootstrap;
 import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelInitializer;
@@ -55,8 +56,11 @@ public class BrokerMain {
                             new ChannelInitializer<SocketChannel>() {
                                 @Override
                                 public void initChannel(SocketChannel ch)  {
+//                                    ch.pipeline()
+//                                            .addLast(new TimeEncoder(), new TimeServerHandler());
                                     ch.pipeline()
-                                            .addLast(new TimeEncoder(), new TimeServerHandler());
+                                            .addLast(new CommandDecoder(), new CommandServerHandler());
+
                                 }
                             })
                     // The number of connections to be queued.

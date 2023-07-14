@@ -1,17 +1,19 @@
-package com.github.mstepan.kakafka.broker;
+package com.github.mstepan.kakafka.broker.command;
 
-import com.github.mstepan.kakafka.broker.commands.KakafkaCommand;
+import com.github.mstepan.kakafka.dto.KakafkaCommand;
 import io.netty.buffer.ByteBuf;
+import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelFutureListener;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelInboundHandlerAdapter;
 import io.netty.util.ReferenceCountUtil;
 
+import java.nio.charset.StandardCharsets;
+
 public class CommandServerHandler extends ChannelInboundHandlerAdapter {
 
     @Override
     public void channelRead(ChannelHandlerContext ctx, Object msg) {
-
         try {
             KakafkaCommand command = (KakafkaCommand) msg;
 
@@ -21,9 +23,8 @@ public class CommandServerHandler extends ChannelInboundHandlerAdapter {
             } else if (command.type() == KakafkaCommand.Type.GET_METADATA) {
                 System.out.println("'get_metadata' command received");
 
-                String dataAsStr = metadataMock();
-
-                ByteBuf buf = ctx.alloc().buffer(dataAsStr.length());
+                ByteBuf buf = ctx.alloc().buffer(metadataMock().length());
+                buf.writeBytes(metadataMock().getBytes(StandardCharsets.US_ASCII));
                 ctx.writeAndFlush(buf).addListener(ChannelFutureListener.CLOSE);
             }
         } finally {
