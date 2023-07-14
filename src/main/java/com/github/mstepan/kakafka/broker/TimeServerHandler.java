@@ -1,6 +1,7 @@
 package com.github.mstepan.kakafka.broker;
 
-import io.netty.buffer.ByteBuf;
+import com.github.mstepan.kakafka.dto.UnixTime;
+
 import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelFutureListener;
 import io.netty.channel.ChannelHandlerContext;
@@ -10,10 +11,7 @@ public class TimeServerHandler extends ChannelInboundHandlerAdapter {
 
     @Override
     public void channelActive(ChannelHandlerContext ctx) {
-        ByteBuf buf = ctx.alloc().buffer(Integer.BYTES);
-        buf.writeInt((int) (System.currentTimeMillis() / 1000L + 2208988800L));
-
-        ChannelFuture future = ctx.writeAndFlush(buf);
+        ChannelFuture future = ctx.writeAndFlush(new UnixTime());
         future.addListener(ChannelFutureListener.CLOSE);
     }
 

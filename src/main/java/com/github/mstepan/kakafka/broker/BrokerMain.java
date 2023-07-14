@@ -55,7 +55,7 @@ public class BrokerMain {
                                 @Override
                                 public void initChannel(SocketChannel ch) throws Exception {
                                     // ch.pipeline().addLast(new EchoServerHandler(serverId));
-                                    ch.pipeline().addLast(new TimeServerHandler());
+                                    ch.pipeline().addLast(new TimeEncoder(), new TimeServerHandler());
                                 }
                             })
                     // The number of connections to be queued.
