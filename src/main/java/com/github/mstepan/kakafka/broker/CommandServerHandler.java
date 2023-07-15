@@ -8,16 +8,22 @@ import io.netty.util.ReferenceCountUtil;
 
 public class CommandServerHandler extends ChannelInboundHandlerAdapter {
 
+    private final String brokerName;
+
+    public CommandServerHandler(String brokerName) {
+        this.brokerName = brokerName;
+    }
+
     @Override
     public void channelRead(ChannelHandlerContext ctx, Object msg) {
         try {
             KakafkaCommand command = (KakafkaCommand) msg;
 
             if (command.type() == KakafkaCommand.Type.EXIT) {
-                System.out.println("'exit' command received");
+                System.out.printf("[%s] 'exit' command received %n", brokerName);
                 ctx.close();
             } else if (command.type() == KakafkaCommand.Type.GET_METADATA) {
-                System.out.println("'get_metadata' command received");
+                System.out.printf("[%s] 'get_metadata' command received %n", brokerName);
                 ctx.writeAndFlush(new CommandResponse(metadataMock()));
             }
         } finally {

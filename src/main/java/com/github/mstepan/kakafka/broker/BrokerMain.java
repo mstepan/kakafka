@@ -73,7 +73,7 @@ public class BrokerMain {
                                             .addLast(
                                                     new KakafkaCommandDecoder(),
                                                     new CommandResponseEncoder(),
-                                                    new CommandServerHandler());
+                                                    new CommandServerHandler(brokerName));
                                 }
                             })
                     // The number of connections to be queued.
