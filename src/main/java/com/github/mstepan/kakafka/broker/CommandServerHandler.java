@@ -1,7 +1,7 @@
-package com.github.mstepan.kakafka.broker.command;
+package com.github.mstepan.kakafka.broker;
 
-import com.github.mstepan.kakafka.dto.CommandResponse;
-import com.github.mstepan.kakafka.dto.KakafkaCommand;
+import com.github.mstepan.kakafka.command.CommandResponse;
+import com.github.mstepan.kakafka.command.KakafkaCommand;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelInboundHandlerAdapter;
 import io.netty.util.ReferenceCountUtil;

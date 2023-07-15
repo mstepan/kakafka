@@ -1,4 +1,4 @@
-package com.github.mstepan.kakafka.dto;
+package com.github.mstepan.kakafka.command;
 
 public class KakafkaCommand {
 

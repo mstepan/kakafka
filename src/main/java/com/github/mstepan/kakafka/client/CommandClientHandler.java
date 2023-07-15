@@ -1,11 +1,11 @@
-package com.github.mstepan.kakafka.client.command;
+package com.github.mstepan.kakafka.client;
 
-import com.github.mstepan.kakafka.dto.CommandResponse;
+import com.github.mstepan.kakafka.command.CommandResponse;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelInboundHandlerAdapter;
 import io.netty.util.ReferenceCountUtil;
 
-public class SendCommandRequestHandler extends ChannelInboundHandlerAdapter {
+public class CommandClientHandler extends ChannelInboundHandlerAdapter {
 
     @Override
     public void channelRead(ChannelHandlerContext ctx, Object msg) {

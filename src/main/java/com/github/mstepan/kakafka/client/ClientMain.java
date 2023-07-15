@@ -1,9 +1,8 @@
 package com.github.mstepan.kakafka.client;
 
-import com.github.mstepan.kakafka.client.command.CommandEncoder;
-import com.github.mstepan.kakafka.client.command.CommandResponseDecoder;
-import com.github.mstepan.kakafka.client.command.SendCommandRequestHandler;
-import com.github.mstepan.kakafka.dto.KakafkaCommand;
+import com.github.mstepan.kakafka.command.CommandResponseDecoder;
+import com.github.mstepan.kakafka.command.KakafkaCommand;
+import com.github.mstepan.kakafka.command.KakafkaCommandEncoder;
 import io.netty.bootstrap.Bootstrap;
 import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelInitializer;
@@ -37,9 +36,9 @@ public class ClientMain {
                         public void initChannel(SocketChannel ch) {
                             ch.pipeline()
                                     .addLast(
-                                            new CommandEncoder(),
+                                            new KakafkaCommandEncoder(),
                                             new CommandResponseDecoder(),
-                                            new SendCommandRequestHandler());
+                                            new CommandClientHandler());
                         }
                     });
 

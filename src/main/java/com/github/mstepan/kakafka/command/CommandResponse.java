@@ -1,4 +1,4 @@
-package com.github.mstepan.kakafka.dto;
+package com.github.mstepan.kakafka.command;
 
 public class CommandResponse {
 
@@ -8,7 +8,7 @@ public class CommandResponse {
         this.data = data;
     }
 
-    public String data(){
+    public String data() {
         return data;
     }
 

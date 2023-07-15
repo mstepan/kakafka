@@ -1,6 +1,5 @@
-package com.github.mstepan.kakafka.client.command;
+package com.github.mstepan.kakafka.command;
 
-import com.github.mstepan.kakafka.dto.CommandResponse;
 import io.netty.buffer.ByteBuf;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.handler.codec.ByteToMessageDecoder;
