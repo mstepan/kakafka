@@ -1,5 +1,7 @@
 package com.github.mstepan.kakafka.broker;
 
+import com.github.mstepan.kakafka.broker.etcd.LeaderElectionThread;
+import com.github.mstepan.kakafka.broker.utils.DaemonThreadFactory;
 import com.github.mstepan.kakafka.command.CommandResponseEncoder;
 import com.github.mstepan.kakafka.command.KakafkaCommandDecoder;
 import io.netty.bootstrap.ServerBootstrap;
@@ -10,6 +12,10 @@ import io.netty.channel.EventLoopGroup;
 import io.netty.channel.nio.NioEventLoopGroup;
 import io.netty.channel.socket.SocketChannel;
 import io.netty.channel.socket.nio.NioServerSocketChannel;
+
+import java.util.UUID;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
 import java.util.concurrent.ThreadLocalRandom;
 
 public class BrokerMain {
@@ -39,7 +45,11 @@ public class BrokerMain {
 
     public void run(int port) throws Exception {
 
-        final String serverId = "broker-0";
+        final String brokerName = "broker-%s".formatted(UUID.randomUUID());
+
+        ExecutorService pool = Executors.newSingleThreadExecutor(new DaemonThreadFactory());
+
+        pool.execute(new LeaderElectionThread(brokerName));
 
         // 'boss', accepts an incoming connection
         EventLoopGroup bossGroup = new NioEventLoopGroup();
@@ -74,7 +84,7 @@ public class BrokerMain {
                     // and the connection is dropped if 3 sequential ACKs are missed.
                     .childOption(ChannelOption.SO_KEEPALIVE, true);
 
-            System.out.printf("[%s] started at '%s:%d'%n", serverId, "localhost", port);
+            System.out.printf("[%s] started at '%s:%d'%n", brokerName, "localhost", port);
 
             // Bind and start to accept incoming connections.
             // Bind to the port of all NICs (network interface cards) in the machine.
@@ -87,6 +97,7 @@ public class BrokerMain {
         } finally {
             workerGroup.shutdownGracefully();
             bossGroup.shutdownGracefully();
+            pool.shutdownNow();
         }
     }
 }
