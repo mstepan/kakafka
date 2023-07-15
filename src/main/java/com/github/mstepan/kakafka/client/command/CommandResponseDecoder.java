@@ -3,15 +3,24 @@ package com.github.mstepan.kakafka.client.command;
 import com.github.mstepan.kakafka.dto.CommandResponse;
 import io.netty.buffer.ByteBuf;
 import io.netty.channel.ChannelHandlerContext;
-import io.netty.handler.codec.ReplayingDecoder;
+import io.netty.handler.codec.ByteToMessageDecoder;
 import java.nio.charset.StandardCharsets;
 import java.util.List;
 
-public class CommandResponseDecoder extends ReplayingDecoder<Void> {
+public class CommandResponseDecoder extends ByteToMessageDecoder {
+
     @Override
     protected void decode(ChannelHandlerContext ctx, ByteBuf in, List<Object> out) {
 
+        if (in.readableBytes() < Integer.BYTES) {
+            return;
+        }
+
         int responseLength = in.readInt();
+
+        if (in.readableBytes() < responseLength) {
+            return;
+        }
 
         byte[] respData = new byte[responseLength];
         in.readBytes(respData);

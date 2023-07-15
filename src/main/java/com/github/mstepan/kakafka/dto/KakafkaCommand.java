@@ -12,11 +12,11 @@ public class KakafkaCommand {
         return type;
     }
 
-    public static KakafkaCommand metadataCommand(){
+    public static KakafkaCommand metadataCommand() {
         return new KakafkaCommand(Type.GET_METADATA);
     }
 
-    public static KakafkaCommand exitCommand(){
+    public static KakafkaCommand exitCommand() {
         return new KakafkaCommand(Type.EXIT);
     }
 

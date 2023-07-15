@@ -5,7 +5,7 @@ import io.netty.buffer.ByteBuf;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.handler.codec.MessageToByteEncoder;
 
-public class KakafkaCommandEncoder extends MessageToByteEncoder<KakafkaCommand> {
+public class CommandEncoder extends MessageToByteEncoder<KakafkaCommand> {
 
     @Override
     protected void encode(ChannelHandlerContext ctx, KakafkaCommand msg, ByteBuf out) {

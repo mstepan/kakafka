@@ -1,7 +1,7 @@
 package com.github.mstepan.kakafka.client;
 
+import com.github.mstepan.kakafka.client.command.CommandEncoder;
 import com.github.mstepan.kakafka.client.command.CommandResponseDecoder;
-import com.github.mstepan.kakafka.client.command.KakafkaCommandEncoder;
 import com.github.mstepan.kakafka.client.command.SendCommandRequestHandler;
 import com.github.mstepan.kakafka.dto.KakafkaCommand;
 import io.netty.bootstrap.Bootstrap;
@@ -35,21 +35,25 @@ public class ClientMain {
                     new ChannelInitializer<SocketChannel>() {
                         @Override
                         public void initChannel(SocketChannel ch) {
-                            //                            ch.pipeline().addLast(new TimeDecoder(),
-                            // new TimeClientHandler());
                             ch.pipeline()
                                     .addLast(
-                                            new KakafkaCommandEncoder(),
+                                            new CommandEncoder(),
                                             new CommandResponseDecoder(),
-                                            new SendCommandRequestHandler(KakafkaCommand.metadataCommand()));
+                                            new SendCommandRequestHandler());
                         }
                     });
 
             // Start the client.
             ChannelFuture connectFuture = bootstrap.connect(host, port).sync();
 
+            connectFuture.channel().writeAndFlush(KakafkaCommand.metadataCommand()).sync();
+
+            connectFuture.channel().writeAndFlush(KakafkaCommand.exitCommand()).sync();
+
             // Wait until the connection is closed.
             connectFuture.channel().closeFuture().sync();
+
+            System.out.println("Client connection closed");
         } finally {
             workerGroup.shutdownGracefully();
         }

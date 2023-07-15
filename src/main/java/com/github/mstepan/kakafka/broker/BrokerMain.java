@@ -1,6 +1,7 @@
 package com.github.mstepan.kakafka.broker;
 
 import com.github.mstepan.kakafka.broker.command.CommandDecoder;
+import com.github.mstepan.kakafka.broker.command.CommandResponseEncoder;
 import com.github.mstepan.kakafka.broker.command.CommandServerHandler;
 import io.netty.bootstrap.ServerBootstrap;
 import io.netty.channel.ChannelFuture;
@@ -62,6 +63,7 @@ public class BrokerMain {
                                     ch.pipeline()
                                             .addLast(
                                                     new CommandDecoder(),
+                                                    new CommandResponseEncoder(),
                                                     new CommandServerHandler());
                                 }
                             })

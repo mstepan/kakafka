@@ -8,6 +8,10 @@ public class CommandResponse {
         this.data = data;
     }
 
+    public String data(){
+        return data;
+    }
+
     @Override
     public String toString() {
         return data;
