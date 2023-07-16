@@ -10,7 +10,7 @@
 #NATIVE_MEMORY_TRACKER="-XX:+UnlockDiagnosticVMOptions -XX:NativeMemoryTracking=summary -XX:+PrintNMTStatistics"
 
 cluster_mode=true
-NODES_CNT=30
+NODES_CNT=50
 
 if [ "$cluster_mode" = true ]; then
     #
