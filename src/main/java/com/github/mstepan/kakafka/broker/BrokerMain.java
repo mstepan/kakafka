@@ -1,5 +1,7 @@
 package com.github.mstepan.kakafka.broker;
 
+import com.github.mstepan.kakafka.broker.core.BrokerNameFactory;
+import com.github.mstepan.kakafka.broker.core.MetadataStorage;
 import com.github.mstepan.kakafka.broker.etcd.LeaderElectionThread;
 import com.github.mstepan.kakafka.broker.utils.DaemonThreadFactory;
 import com.github.mstepan.kakafka.command.CommandResponseEncoder;
@@ -12,16 +14,25 @@ import io.netty.channel.EventLoopGroup;
 import io.netty.channel.nio.NioEventLoopGroup;
 import io.netty.channel.socket.SocketChannel;
 import io.netty.channel.socket.nio.NioServerSocketChannel;
-
-import java.util.UUID;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ThreadLocalRandom;
 
 public class BrokerMain {
 
+    private final BrokerNameFactory nameFac;
+
+    private final MetadataStorage metadata;
+
+    public BrokerMain(BrokerNameFactory nameFac, MetadataStorage metadata) {
+        this.nameFac = nameFac;
+        this.metadata = metadata;
+    }
+
     public static void main(String[] args) throws Exception {
-        new BrokerMain().run(getPort());
+        final BrokerNameFactory nameFac = new BrokerNameFactory();
+        final MetadataStorage metadata = new MetadataStorage();
+        new BrokerMain(nameFac, metadata).run(getPort());
     }
 
     private static int getPort() {
@@ -45,11 +56,11 @@ public class BrokerMain {
 
     public void run(int port) throws Exception {
 
-        final String brokerName = "broker-%s".formatted(UUID.randomUUID());
+        final String brokerName = nameFac.generateBrokerName();
 
         ExecutorService pool = Executors.newSingleThreadExecutor(new DaemonThreadFactory());
 
-        pool.execute(new LeaderElectionThread(brokerName));
+        pool.execute(new LeaderElectionThread(brokerName, metadata));
 
         // 'boss', accepts an incoming connection
         EventLoopGroup bossGroup = new NioEventLoopGroup();
@@ -73,7 +84,7 @@ public class BrokerMain {
                                             .addLast(
                                                     new KakafkaCommandDecoder(),
                                                     new CommandResponseEncoder(),
-                                                    new CommandServerHandler(brokerName));
+                                                    new CommandServerHandler(brokerName, metadata));
                                 }
                             })
                     // The number of connections to be queued.

@@ -12,11 +12,13 @@
 cluster_mode=true
 
 if [ "$cluster_mode" = true ]; then
-    # run 3 broker in background as a cluster
-    echo "Starting cluster with 3 nodes"
+    # run 5 brokers in background as a cluster
+    echo "Starting cluster with 5 nodes"
     java -Dbroker.port=9091 -jar "$(find -E target -regex '.*/kakafka-.*-SNAPSHOT\.jar$')" &
     java -Dbroker.port=9092 -jar "$(find -E target -regex '.*/kakafka-.*-SNAPSHOT\.jar$')" &
     java -Dbroker.port=9093 -jar "$(find -E target -regex '.*/kakafka-.*-SNAPSHOT\.jar$')" &
+    java -Dbroker.port=9094 -jar "$(find -E target -regex '.*/kakafka-.*-SNAPSHOT\.jar$')" &
+    java -Dbroker.port=9095 -jar "$(find -E target -regex '.*/kakafka-.*-SNAPSHOT\.jar$')" &
 else
     # run single broker
     echo "Starting single broker"

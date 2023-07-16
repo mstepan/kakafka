@@ -1,5 +1,6 @@
 package com.github.mstepan.kakafka.broker.etcd;
 
+import com.github.mstepan.kakafka.broker.core.MetadataStorage;
 import io.etcd.jetcd.ByteSequence;
 import io.etcd.jetcd.Client;
 import io.etcd.jetcd.Election;
@@ -7,7 +8,6 @@ import io.etcd.jetcd.KeyValue;
 import io.etcd.jetcd.Lease;
 import io.etcd.jetcd.election.LeaderResponse;
 import io.etcd.jetcd.lease.LeaseGrantResponse;
-
 import java.nio.charset.StandardCharsets;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeUnit;
@@ -26,8 +26,11 @@ public class LeaderElectionThread implements Runnable {
 
     private final String brokerName;
 
-    public LeaderElectionThread(String brokerName) {
+    private final MetadataStorage metadata;
+
+    public LeaderElectionThread(String brokerName, MetadataStorage metadata) {
         this.brokerName = brokerName;
+        this.metadata = metadata;
     }
 
     @Override
@@ -57,7 +60,14 @@ public class LeaderElectionThread implements Runnable {
                             */
                             System.out.printf(
                                     "[%s] Leader selected, key = '%s', value = '%s' %n",
-                                    brokerName, leaderKeyAndValue.getKey(), leaderKeyAndValue.getValue());
+                                    brokerName,
+                                    leaderKeyAndValue.getKey(),
+                                    leaderKeyAndValue.getValue());
+
+                            metadata.setLeader(
+                                    leaderKeyAndValue
+                                            .getValue()
+                                            .toString(StandardCharsets.US_ASCII));
                         }
 
                         @Override
@@ -67,7 +77,7 @@ public class LeaderElectionThread implements Runnable {
 
                         @Override
                         public void onCompleted() {
-                            System.out.println("Election done");
+                            System.out.printf("[%s] Election done%n", brokerName);
                         }
                     });
 
@@ -77,24 +87,13 @@ public class LeaderElectionThread implements Runnable {
             System.out.printf("[%s] etcd LEADER ELECTION started%n", brokerName);
 
             while (!Thread.currentThread().isInterrupted()) {
-                try {
-                    TimeUnit.SECONDS.sleep(THREAD_SLEEP_TIME_IN_SEC);
-                    // https://github.com/etcd-io/jetcd/blob/main/jetcd-core/src/main/java/io/etcd/jetcd/Lease.java
-                    lease.keepAliveOnce(leaseResp.getID()).get();
-
-//                    System.out.printf("[%s] etcd lease renewed%n", brokerName);
-
-                } catch (InterruptedException interEx) {
-                    Thread.currentThread().interrupt();
-                } catch (ExecutionException execEx) {
-                    execEx.printStackTrace();
-                }
+                TimeUnit.SECONDS.sleep(THREAD_SLEEP_TIME_IN_SEC);
+                // https://github.com/etcd-io/jetcd/blob/main/jetcd-core/src/main/java/io/etcd/jetcd/Lease.java
+                lease.keepAliveOnce(leaseResp.getID()).get();
             }
-        }
-        catch(InterruptedException interEx){
+        } catch (InterruptedException interEx) {
             Thread.currentThread().interrupt();
-        }
-        catch(ExecutionException execEx){
+        } catch (ExecutionException execEx) {
             execEx.printStackTrace();
         }
     }
