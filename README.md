@@ -17,3 +17,7 @@ Use the following:
 ./mvnw test
 ```
 
+## Kakafka Protocol Description
+
+//todo:
+
