@@ -10,15 +10,19 @@
 #NATIVE_MEMORY_TRACKER="-XX:+UnlockDiagnosticVMOptions -XX:NativeMemoryTracking=summary -XX:+PrintNMTStatistics"
 
 cluster_mode=true
+NODES_CNT=30
 
 if [ "$cluster_mode" = true ]; then
-    # run 5 brokers in background as a cluster
-    echo "Starting cluster with 5 nodes"
-    java -Dbroker.port=9091 -jar "$(find -E target -regex '.*/kakafka-.*-SNAPSHOT\.jar$')" &
-    java -Dbroker.port=9092 -jar "$(find -E target -regex '.*/kakafka-.*-SNAPSHOT\.jar$')" &
-    java -Dbroker.port=9093 -jar "$(find -E target -regex '.*/kakafka-.*-SNAPSHOT\.jar$')" &
-    java -Dbroker.port=9094 -jar "$(find -E target -regex '.*/kakafka-.*-SNAPSHOT\.jar$')" &
-    java -Dbroker.port=9095 -jar "$(find -E target -regex '.*/kakafka-.*-SNAPSHOT\.jar$')" &
+    #
+    # run $NODES_CNT brokers in background as a cluster
+    #
+    echo "Starting cluster with $NODES_CNT nodes"
+
+    for i in $(eval echo "{1..$NODES_CNT}")
+    do
+        port=$((9090 + $i))
+        java -Dbroker.port=$port -jar "$(find -E target -regex '.*/kakafka-.*-SNAPSHOT\.jar$')" &
+    done
 else
     # run single broker
     echo "Starting single broker"

@@ -14,14 +14,14 @@ public final class CommandResponseEncoder extends MessageToByteEncoder<CommandRe
         if (msg instanceof GetMetadataResponse metadataResp) {
 
             //
-            // | MARKER, int | broker name length, int | <broker name chars>
+            // | MARKER, int | <leader broker name length>, int | <leader broker name chars>
             //
             out.writeInt(CommandResponse.GET_METADATA_MARKER);
 
             writeString(out, metadataResp.state().leaderBrokerName());
 
             //
-            // | <live broker count>, int | <broker-1> | ... | <broker-n> |
+            // | <live brokers count>, int | <broker-1> | ... | <broker-n> |
             //
             List<LiveBroker> brokers = metadataResp.state().brokers();
             out.writeInt(brokers.size());
