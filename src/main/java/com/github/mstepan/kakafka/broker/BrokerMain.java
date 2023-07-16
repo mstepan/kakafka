@@ -82,9 +82,6 @@ public class BrokerMain {
                             new ChannelInitializer<SocketChannel>() {
                                 @Override
                                 public void initChannel(SocketChannel ch) {
-                                    //                                    ch.pipeline()
-                                    //                                            .addLast(new
-                                    // TimeEncoder(), new TimeServerHandler());
                                     ch.pipeline()
                                             .addLast(
                                                     new KakafkaCommandDecoder(),

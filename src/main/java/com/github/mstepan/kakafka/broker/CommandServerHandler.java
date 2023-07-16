@@ -1,5 +1,6 @@
 package com.github.mstepan.kakafka.broker;
 
+import com.github.mstepan.kakafka.broker.core.MetadataState;
 import com.github.mstepan.kakafka.broker.core.MetadataStorage;
 import com.github.mstepan.kakafka.command.GetMetadataResponse;
 import com.github.mstepan.kakafka.command.KakafkaCommand;
@@ -28,7 +29,12 @@ public class CommandServerHandler extends ChannelInboundHandlerAdapter {
                 ctx.close();
             } else if (command.type() == KakafkaCommand.Type.GET_METADATA) {
                 System.out.printf("[%s] 'get_metadata' command received %n", brokerName);
-                ctx.writeAndFlush(new GetMetadataResponse(metadata.getMetadataState()));
+
+                MetadataState state = metadata.getMetadataState();
+
+                System.out.println("Metadata state obtained");
+
+                ctx.writeAndFlush(new GetMetadataResponse(state));
             }
         } finally {
             ReferenceCountUtil.release(msg);

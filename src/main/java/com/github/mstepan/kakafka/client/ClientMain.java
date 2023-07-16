@@ -1,5 +1,6 @@
 package com.github.mstepan.kakafka.client;
 
+import com.github.mstepan.kakafka.broker.core.MetadataState;
 import com.github.mstepan.kakafka.command.CommandResponseDecoder;
 import com.github.mstepan.kakafka.command.KakafkaCommand;
 import com.github.mstepan.kakafka.command.KakafkaCommandEncoder;
@@ -23,6 +24,9 @@ public class ClientMain {
     }
 
     public void run(String host, int port) throws Exception {
+
+        SynchChannel<MetadataState> metaChannel = new SynchChannel<>();
+
         EventLoopGroup workerGroup = new NioEventLoopGroup();
 
         try {
@@ -34,11 +38,12 @@ public class ClientMain {
                     new ChannelInitializer<SocketChannel>() {
                         @Override
                         public void initChannel(SocketChannel ch) {
+
                             ch.pipeline()
                                     .addLast(
                                             new KakafkaCommandEncoder(),
                                             new CommandResponseDecoder(),
-                                            new CommandClientHandler());
+                                            new CommandClientHandler(metaChannel));
                         }
                     });
 
@@ -46,6 +51,10 @@ public class ClientMain {
             ChannelFuture connectFuture = bootstrap.connect(host, port).sync();
 
             connectFuture.channel().writeAndFlush(KakafkaCommand.metadataCommand()).sync();
+
+            String leaderBrokerUrl = metaChannel.get().leaderUrl();
+
+            System.out.printf("leader broker: %s%n", leaderBrokerUrl);
 
             connectFuture.channel().writeAndFlush(KakafkaCommand.exitCommand()).sync();
 
