@@ -24,9 +24,6 @@ public class MetadataStorage {
         this.leaderBrokerName = brokerName;
     }
 
-    // TODO: same as KeepAliveAndLeaderElectionTask.BROKER_KEY_PREFIX
-    private static final String BROKER_KEY_PREFIX = "/kakafka/brokers/";
-
     public String getMetadataSnapshot() {
 
         StringBuilder brokersData = new StringBuilder();
@@ -36,7 +33,7 @@ public class MetadataStorage {
 
             GetResponse getResp =
                     kvClient.get(
-                                    EtcdUtils.toByteSeq(BROKER_KEY_PREFIX),
+                                    EtcdUtils.toByteSeq(BrokerConfig.BROKER_KEY_PREFIX),
                                     GetOption.newBuilder().isPrefix(true).build())
                             .get();
 

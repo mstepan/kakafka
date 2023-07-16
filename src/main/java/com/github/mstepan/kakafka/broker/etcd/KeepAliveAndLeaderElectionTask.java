@@ -29,7 +29,7 @@ public class KeepAliveAndLeaderElectionTask implements Runnable {
 
     private static final ByteSequence LEADER_KEY = EtcdUtils.toByteSeq("/kakafka/leader");
 
-    private static final String BROKER_KEY_PREFIX = "/kakafka/brokers/%s";
+    private static final String BROKER_KEY_PREFIX_TEMPLATE = BrokerConfig.BROKER_KEY_PREFIX + "/%s";
 
     /** Should be less or equal to 'LEASE_TTL_IN_SEC' value */
     private static final long LEASE_GRANT_OPERATION_TIMEOUT_IN_SEC = 3L;
@@ -65,13 +65,13 @@ public class KeepAliveAndLeaderElectionTask implements Runnable {
             System.out.printf("[%s] etcd LEASE granted%n", config.brokerName());
 
             kvClient.put(
-                    EtcdUtils.toByteSeq(BROKER_KEY_PREFIX.formatted(config.brokerName())),
+                    EtcdUtils.toByteSeq(BROKER_KEY_PREFIX_TEMPLATE.formatted(config.brokerName())),
                     EtcdUtils.toByteSeq(config.url()),
                     PutOption.newBuilder().withLeaseId(leaseResp.getID()).build());
 
             System.out.printf(
                     "[%s] registering active broker at prefix '%s' %n",
-                    BROKER_KEY_PREFIX, config.brokerName());
+                    config.brokerName(), BROKER_KEY_PREFIX_TEMPLATE.formatted(config.brokerName()));
 
             electionClient.observe(LEADER_KEY, new LeaderElectionListener(config, metadata));
 
