@@ -1,7 +1,7 @@
 package com.github.mstepan.kakafka.broker;
 
 import com.github.mstepan.kakafka.broker.core.MetadataStorage;
-import com.github.mstepan.kakafka.command.CommandResponse;
+import com.github.mstepan.kakafka.command.GetMetadataResponse;
 import com.github.mstepan.kakafka.command.KakafkaCommand;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelInboundHandlerAdapter;
@@ -28,7 +28,7 @@ public class CommandServerHandler extends ChannelInboundHandlerAdapter {
                 ctx.close();
             } else if (command.type() == KakafkaCommand.Type.GET_METADATA) {
                 System.out.printf("[%s] 'get_metadata' command received %n", brokerName);
-                ctx.writeAndFlush(new CommandResponse(metadata.getMetadataSnapshot()));
+                ctx.writeAndFlush(new GetMetadataResponse(metadata.getMetadataState()));
             }
         } finally {
             ReferenceCountUtil.release(msg);

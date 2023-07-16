@@ -8,6 +8,8 @@ import io.etcd.jetcd.KeyValue;
 import io.etcd.jetcd.kv.GetResponse;
 import io.etcd.jetcd.options.GetOption;
 import java.nio.charset.StandardCharsets;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.concurrent.ExecutionException;
 
 public class MetadataStorage {
@@ -24,9 +26,9 @@ public class MetadataStorage {
         this.leaderBrokerName = brokerName;
     }
 
-    public String getMetadataSnapshot() {
+    public MetadataState getMetadataState() {
 
-        StringBuilder brokersData = new StringBuilder();
+        List<LiveBroker> liveBrokers = new ArrayList<>();
 
         try (Client client = Client.builder().endpoints(config.etcdEndpoint()).build();
                 KV kvClient = client.getKVClient()) {
@@ -41,16 +43,10 @@ public class MetadataStorage {
 
                 String brokerIdPath = keyValue.getKey().toString(StandardCharsets.US_ASCII);
 
-                brokersData.append(
-                        """
-                        {
-                            "id": "%s",
-                            "url": "%s"
-                        }
-                        """
-                                .formatted(
-                                        brokerIdPath.substring(brokerIdPath.lastIndexOf("/") + 1),
-                                        keyValue.getValue().toString(StandardCharsets.US_ASCII)));
+                final String brokerName = brokerIdPath.substring(brokerIdPath.lastIndexOf("/") + 1);
+                final String brokerUrl = keyValue.getValue().toString(StandardCharsets.US_ASCII);
+
+                liveBrokers.add(new LiveBroker(brokerName, brokerUrl));
             }
 
         } catch (InterruptedException interEx) {
@@ -59,12 +55,6 @@ public class MetadataStorage {
             execEx.printStackTrace();
         }
 
-        return """
-            {
-                "leader": "%s"
-                "brokers": ["%s"]
-            }
-            """
-                .formatted(leaderBrokerName, brokersData);
+        return new MetadataState(leaderBrokerName, liveBrokers);
     }
 }

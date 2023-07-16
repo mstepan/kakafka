@@ -1,9 +1,6 @@
 package com.github.mstepan.kakafka.command;
 
-public record CommandResponse(String data) {
+public interface CommandResponse {
 
-    @Override
-    public String toString() {
-        return data;
-    }
+    int GET_METADATA_MARKER = 0;
 }
