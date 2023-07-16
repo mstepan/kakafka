@@ -120,7 +120,7 @@
     </dependencyManagement>
 
     <dependencies>
-
+        <!-- Netty -->
         <dependency>
             <groupId>io.netty</groupId>
             <artifactId>netty-all</artifactId>
@@ -160,7 +160,6 @@
             <version>${assertj.version}</version>
             <scope>test</scope>
         </dependency>
-
     </dependencies>
 
 </project>
