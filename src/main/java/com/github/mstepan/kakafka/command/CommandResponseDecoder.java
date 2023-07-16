@@ -6,7 +6,7 @@ import io.netty.handler.codec.ByteToMessageDecoder;
 import java.nio.charset.StandardCharsets;
 import java.util.List;
 
-public class CommandResponseDecoder extends ByteToMessageDecoder {
+public final class CommandResponseDecoder extends ByteToMessageDecoder {
 
     @Override
     protected void decode(ChannelHandlerContext ctx, ByteBuf in, List<Object> out) {

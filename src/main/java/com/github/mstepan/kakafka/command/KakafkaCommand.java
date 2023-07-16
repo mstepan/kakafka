@@ -1,16 +1,6 @@
 package com.github.mstepan.kakafka.command;
 
-public class KakafkaCommand {
-
-    private final Type type;
-
-    public KakafkaCommand(Type type) {
-        this.type = type;
-    }
-
-    public Type type() {
-        return type;
-    }
+public record KakafkaCommand(Type type) {
 
     public static KakafkaCommand metadataCommand() {
         return new KakafkaCommand(Type.GET_METADATA);

@@ -5,7 +5,7 @@ import io.netty.channel.ChannelHandlerContext;
 import io.netty.handler.codec.MessageToByteEncoder;
 import java.nio.charset.StandardCharsets;
 
-public class CommandResponseEncoder extends MessageToByteEncoder<CommandResponse> {
+public final class CommandResponseEncoder extends MessageToByteEncoder<CommandResponse> {
     @Override
     protected void encode(ChannelHandlerContext ctx, CommandResponse msg, ByteBuf out) {
         out.writeInt(msg.data().length());
