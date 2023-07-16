@@ -11,7 +11,7 @@ import java.nio.charset.StandardCharsets;
 import java.util.UUID;
 import java.util.concurrent.TimeUnit;
 
-public class EtcdLeaderElectionMain {
+public class LeaderElectionMain {
 
     private static final String ETCD_ENDPOINT = "http://localhost:2379";
 
@@ -32,11 +32,11 @@ public class EtcdLeaderElectionMain {
     public static void main(String[] args) throws Exception {
 
         try (Client client = Client.builder().endpoints(ETCD_ENDPOINT).build();
-                Lease lease = client.getLeaseClient();
+                Lease leaseClient = client.getLeaseClient();
                 Election electionClient = client.getElectionClient()) {
 
             LeaseGrantResponse leaseResp =
-                    lease.grant(LEASE_TTL_IN_SEC, 3L, TimeUnit.SECONDS).get();
+                    leaseClient.grant(LEASE_TTL_IN_SEC, 3L, TimeUnit.SECONDS).get();
 
             final String brokerName =
                     "broker-%s"
@@ -79,9 +79,9 @@ public class EtcdLeaderElectionMain {
             electionClient.campaign(LEADER_KEY, leaseResp.getID(), serverId);
 
             while (true) {
-                TimeUnit.SECONDS.sleep(1);
+                TimeUnit.SECONDS.sleep(THREAD_SLEEP_TIME_IN_SEC);
                 // https://github.com/etcd-io/jetcd/blob/main/jetcd-core/src/main/java/io/etcd/jetcd/Lease.java
-                lease.keepAliveOnce(leaseResp.getID()).get();
+                leaseClient.keepAliveOnce(leaseResp.getID()).get();
             }
         }
     }

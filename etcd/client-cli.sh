@@ -1,11 +1,23 @@
 #!/usr/bin/env bash
 
 #
-# cli some commands
+# Help menu
 #
 # etcdctl help
-# etcdctl member list
-# etcdctl get /kakafka/leader
+
+#
+# Get active leader
+#
+# etcdctl get --prefix  /kakafka/leader/
+
+#
+# Get all leases
+#
 # etcdctl lease list
+
+#
+# Get all active brokers
+#
+# etcdctl get --prefix /kakafka/brokers/
 
 docker exec -it etcd-kakafka bash

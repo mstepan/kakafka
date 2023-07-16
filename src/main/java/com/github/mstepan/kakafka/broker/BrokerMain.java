@@ -2,7 +2,7 @@ package com.github.mstepan.kakafka.broker;
 
 import com.github.mstepan.kakafka.broker.core.BrokerNameFactory;
 import com.github.mstepan.kakafka.broker.core.MetadataStorage;
-import com.github.mstepan.kakafka.broker.etcd.LeaderElectionThread;
+import com.github.mstepan.kakafka.broker.etcd.KeepAliveAndLeaderElectionTask;
 import com.github.mstepan.kakafka.broker.utils.DaemonThreadFactory;
 import com.github.mstepan.kakafka.command.CommandResponseEncoder;
 import com.github.mstepan.kakafka.command.KakafkaCommandDecoder;
@@ -20,19 +20,22 @@ import java.util.concurrent.ThreadLocalRandom;
 
 public class BrokerMain {
 
-    private final BrokerNameFactory nameFac;
+    private final BrokerConfig config;
 
     private final MetadataStorage metadata;
 
-    public BrokerMain(BrokerNameFactory nameFac, MetadataStorage metadata) {
-        this.nameFac = nameFac;
+    public BrokerMain(BrokerConfig config, MetadataStorage metadata) {
+        this.config = config;
         this.metadata = metadata;
     }
 
     public static void main(String[] args) throws Exception {
         final BrokerNameFactory nameFac = new BrokerNameFactory();
+        final BrokerConfig config = new BrokerConfig(nameFac.generateBrokerName(), getPort());
+
         final MetadataStorage metadata = new MetadataStorage();
-        new BrokerMain(nameFac, metadata).run(getPort());
+
+        new BrokerMain(config, metadata).run(getPort());
     }
 
     private static int getPort() {
@@ -56,11 +59,9 @@ public class BrokerMain {
 
     public void run(int port) throws Exception {
 
-        final String brokerName = nameFac.generateBrokerName();
-
         ExecutorService pool = Executors.newSingleThreadExecutor(new DaemonThreadFactory());
 
-        pool.execute(new LeaderElectionThread(brokerName, metadata));
+        pool.execute(new KeepAliveAndLeaderElectionTask(config, metadata));
 
         // 'boss', accepts an incoming connection
         EventLoopGroup bossGroup = new NioEventLoopGroup();
@@ -84,7 +85,8 @@ public class BrokerMain {
                                             .addLast(
                                                     new KakafkaCommandDecoder(),
                                                     new CommandResponseEncoder(),
-                                                    new CommandServerHandler(brokerName, metadata));
+                                                    new CommandServerHandler(
+                                                            config.brokerName(), metadata));
                                 }
                             })
                     // The number of connections to be queued.
@@ -95,7 +97,7 @@ public class BrokerMain {
                     // and the connection is dropped if 3 sequential ACKs are missed.
                     .childOption(ChannelOption.SO_KEEPALIVE, true);
 
-            System.out.printf("[%s] started at '%s:%d'%n", brokerName, "localhost", port);
+            System.out.printf("[%s] started at '%s:%d'%n", config.brokerName(), "localhost", port);
 
             // Bind and start to accept incoming connections.
             // Bind to the port of all NICs (network interface cards) in the machine.
