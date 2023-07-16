@@ -1,39 +1,65 @@
 package com.github.mstepan.kakafka.broker.core;
 
-import java.util.concurrent.CopyOnWriteArraySet;
+import com.github.mstepan.kakafka.broker.BrokerConfig;
+import com.github.mstepan.kakafka.broker.utils.EtcdUtils;
+import io.etcd.jetcd.Client;
+import io.etcd.jetcd.KV;
+import io.etcd.jetcd.KeyValue;
+import io.etcd.jetcd.kv.GetResponse;
+import io.etcd.jetcd.options.GetOption;
+import java.nio.charset.StandardCharsets;
+import java.util.concurrent.ExecutionException;
 
 public class MetadataStorage {
 
-    private String leaderBrokerName;
+    private final BrokerConfig config;
 
-    private final CopyOnWriteArraySet<LiveBroker> liveBrokers = new CopyOnWriteArraySet<>();
+    public MetadataStorage(BrokerConfig config) {
+        this.config = config;
+    }
 
-    public synchronized void setLeader(String brokerName) {
+    private volatile String leaderBrokerName;
+
+    public void setLeader(String brokerName) {
         this.leaderBrokerName = brokerName;
     }
 
-    public void addBroker(LiveBroker broker) {
-        liveBrokers.add(broker);
-    }
+    // TODO: same as KeepAliveAndLeaderElectionTask.BROKER_KEY_PREFIX
+    private static final String BROKER_KEY_PREFIX = "/kakafka/brokers/";
 
-    public synchronized String getLeaderBrokerName() {
-        return leaderBrokerName;
-    }
-
-    public synchronized String getMetadataSnapshot() {
+    public String getMetadataSnapshot() {
 
         StringBuilder brokersData = new StringBuilder();
-        for (LiveBroker singleBroker : liveBrokers) {
-            brokersData.append("{");
 
-            brokersData.append(
-                    """
-                "id": "%s",
-                "url": "%s"
-            """
-                            .formatted(singleBroker.id(), singleBroker.url()));
+        try (Client client = Client.builder().endpoints(config.etcdEndpoint()).build();
+                KV kvClient = client.getKVClient()) {
 
-            brokersData.append("}");
+            GetResponse getResp =
+                    kvClient.get(
+                                    EtcdUtils.toByteSeq(BROKER_KEY_PREFIX),
+                                    GetOption.newBuilder().isPrefix(true).build())
+                            .get();
+
+            for (KeyValue keyValue : getResp.getKvs()) {
+
+                String brokerIdPath = keyValue.getKey().toString(StandardCharsets.US_ASCII);
+
+                brokersData.append(
+                        """
+                        {
+                            "id": "%s",
+                            "url": "%s"
+                        }
+                        """
+                                .formatted(
+                                        brokerIdPath.substring(brokerIdPath.lastIndexOf("/") + 1),
+                                        keyValue.getValue().toString(StandardCharsets.US_ASCII)));
+            }
+
+        } catch (InterruptedException interEx) {
+            Thread.currentThread().interrupt();
+        } catch (ExecutionException execEx) {
+            execEx.printStackTrace();
         }
 
         return """

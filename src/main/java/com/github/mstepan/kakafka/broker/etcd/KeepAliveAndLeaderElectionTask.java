@@ -27,10 +27,7 @@ import java.util.concurrent.TimeUnit;
  */
 public class KeepAliveAndLeaderElectionTask implements Runnable {
 
-    private static final String ETCD_ENDPOINT = "http://localhost:2379";
-
-    private static final ByteSequence LEADER_KEY =
-            ByteSequence.from("/kakafka/leader", StandardCharsets.UTF_8);
+    private static final ByteSequence LEADER_KEY = EtcdUtils.toByteSeq("/kakafka/leader");
 
     private static final String BROKER_KEY_PREFIX = "/kakafka/brokers/%s";
 
@@ -53,7 +50,7 @@ public class KeepAliveAndLeaderElectionTask implements Runnable {
 
     @Override
     public void run() {
-        try (Client client = Client.builder().endpoints(ETCD_ENDPOINT).build();
+        try (Client client = Client.builder().endpoints(config.etcdEndpoint()).build();
                 Lease lease = client.getLeaseClient();
                 KV kvClient = client.getKVClient();
                 Election electionClient = client.getElectionClient()) {

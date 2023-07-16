@@ -1,4 +1,4 @@
-package com.github.mstepan.kakafka.etcd;
+package com.github.mstepan.kakafka.etcd_sandbox;
 
 import io.etcd.jetcd.ByteSequence;
 import io.etcd.jetcd.Client;

@@ -20,6 +20,9 @@ import java.util.concurrent.ThreadLocalRandom;
 
 public class BrokerMain {
 
+    // specify 'etcd' endpoint using ENVs
+    private static final String ETCD_ENDPOINT = "http://localhost:2379";
+
     private final BrokerConfig config;
 
     private final MetadataStorage metadata;
@@ -31,9 +34,10 @@ public class BrokerMain {
 
     public static void main(String[] args) throws Exception {
         final BrokerNameFactory nameFac = new BrokerNameFactory();
-        final BrokerConfig config = new BrokerConfig(nameFac.generateBrokerName(), getPort());
+        final BrokerConfig config =
+                new BrokerConfig(nameFac.generateBrokerName(), getPort(), ETCD_ENDPOINT);
 
-        final MetadataStorage metadata = new MetadataStorage();
+        final MetadataStorage metadata = new MetadataStorage(config);
 
         new BrokerMain(config, metadata).run(getPort());
     }

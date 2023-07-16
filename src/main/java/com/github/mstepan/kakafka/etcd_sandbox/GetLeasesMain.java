@@ -1,4 +1,4 @@
-package com.github.mstepan.kakafka.etcd;
+package com.github.mstepan.kakafka.etcd_sandbox;
 
 import com.github.mstepan.kakafka.broker.utils.EtcdUtils;
 import io.etcd.jetcd.Client;
