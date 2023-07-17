@@ -1,6 +1,5 @@
 package com.github.mstepan.kakafka.client;
 
-import com.github.mstepan.kakafka.broker.core.LiveBroker;
 import com.github.mstepan.kakafka.broker.core.MetadataState;
 import com.github.mstepan.kakafka.command.Command;
 import com.github.mstepan.kakafka.command.CommandEncoder;
