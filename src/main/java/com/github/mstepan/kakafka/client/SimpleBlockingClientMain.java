@@ -5,6 +5,8 @@ import com.github.mstepan.kakafka.command.Command;
 import com.github.mstepan.kakafka.command.CommandEncoder;
 import com.github.mstepan.kakafka.command.CommandResponse;
 import com.github.mstepan.kakafka.command.CommandResponseDecoder;
+import com.github.mstepan.kakafka.command.CreateTopicCommand;
+import com.github.mstepan.kakafka.command.GetMetadataCommand;
 import com.github.mstepan.kakafka.command.MetadataCommandResponse;
 import com.github.mstepan.kakafka.io.DataIn;
 import com.github.mstepan.kakafka.io.DataOut;
@@ -39,7 +41,7 @@ public class SimpleBlockingClientMain {
         }
         try {
             MetadataState metaState = getMetadata(socket);
-            //            System.out.println(metaState.asStr());
+//            System.out.println(metaState.asStr());
 
             Socket leader =
                     connect(
@@ -56,7 +58,7 @@ public class SimpleBlockingClientMain {
 
                 try (DataInputStream dataIn = new DataInputStream(leader.getInputStream());
                         DataOutputStream dataOut = new DataOutputStream(leader.getOutputStream())) {
-                    sendCommand(new Command(Command.Type.CREATE_TOPIC), dataOut);
+                    sendCommand(new CreateTopicCommand(), dataOut);
                 }
 
             } finally {
@@ -78,7 +80,7 @@ public class SimpleBlockingClientMain {
 
             DataIn in = DataIn.fromStandardStream(dataIn);
 
-            sendCommand(new Command(Command.Type.GET_METADATA), dataOut);
+            sendCommand(new GetMetadataCommand(), dataOut);
 
             CommandResponse response = CommandResponseDecoder.decode(in);
 

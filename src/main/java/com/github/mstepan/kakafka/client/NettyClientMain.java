@@ -1,9 +1,10 @@
 package com.github.mstepan.kakafka.client;
 
 import com.github.mstepan.kakafka.broker.core.MetadataState;
-import com.github.mstepan.kakafka.command.Command;
 import com.github.mstepan.kakafka.command.CommandEncoder;
 import com.github.mstepan.kakafka.command.CommandResponseDecoder;
+import com.github.mstepan.kakafka.command.ExitCommand;
+import com.github.mstepan.kakafka.command.GetMetadataCommand;
 import io.netty.bootstrap.Bootstrap;
 import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelInitializer;
@@ -55,13 +56,13 @@ public class NettyClientMain {
             // Start the client.
             ChannelFuture connectFuture = bootstrap.connect(host, port).sync();
 
-            connectFuture.channel().writeAndFlush(Command.metadataCommand()).sync();
+            connectFuture.channel().writeAndFlush(new GetMetadataCommand()).sync();
 
             MetadataState state = metaChannel.get();
 
             System.out.println(state.asStr());
 
-            connectFuture.channel().writeAndFlush(Command.exitCommand()).sync();
+            connectFuture.channel().writeAndFlush(new ExitCommand()).sync();
 
             // Wait until the connection is closed.
             connectFuture.channel().closeFuture().sync();
