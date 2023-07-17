@@ -12,12 +12,12 @@ import java.io.DataInputStream;
 import java.io.DataOutputStream;
 import java.io.IOException;
 import java.net.Socket;
-import java.net.UnknownHostException;
 import java.util.List;
 
 public class SimpleBlockingClientMain {
 
     private static final int NO_AVAILABLE_BROKERS_EXIT_CODE = 3;
+    private static final int CANT_CONNECT_TO_LEADER_EXIT_CODE = 4;
 
     private static final List<BrokerHost> seedBrokers =
             List.of(
@@ -29,7 +29,7 @@ public class SimpleBlockingClientMain {
         new SimpleBlockingClientMain().run();
     }
 
-    public void run() {
+    public void run() throws IOException {
 
         Socket socket = findAvailableBroker();
 
@@ -37,30 +37,56 @@ public class SimpleBlockingClientMain {
             System.err.println("All brokers are DOWN!!!");
             System.exit(NO_AVAILABLE_BROKERS_EXIT_CODE);
         }
+        try {
+            MetadataState metaState = getMetadata(socket);
+            //            System.out.println(metaState.asStr());
 
+            Socket leader =
+                    connect(
+                            new BrokerHost(
+                                    metaState.leaderBroker().host(),
+                                    metaState.leaderBroker().port()));
+
+            try {
+                if (leader == null) {
+                    System.exit(CANT_CONNECT_TO_LEADER_EXIT_CODE);
+                }
+
+                System.out.println("Successfully connected to LEADER broker");
+
+                try (DataInputStream dataIn = new DataInputStream(leader.getInputStream());
+                        DataOutputStream dataOut = new DataOutputStream(leader.getOutputStream())) {
+                    sendCommand(new Command(Command.Type.CREATE_TOPIC), dataOut);
+                }
+
+            } finally {
+                closeSocket(leader);
+            }
+        } finally {
+            closeSocket(socket);
+        }
+    }
+
+    private void sendCommand(Command command, DataOutputStream out) throws IOException {
+        CommandEncoder.encode(DataOut.fromStandardStream(out), command);
+        out.flush();
+    }
+
+    private MetadataState getMetadata(Socket socket) throws IOException {
         try (DataOutputStream dataOut = new DataOutputStream(socket.getOutputStream());
                 DataInputStream dataIn = new DataInputStream(socket.getInputStream())) {
 
-            CommandEncoder.encode(
-                    DataOut.fromStandardStream(dataOut), new Command(Command.Type.GET_METADATA));
-            dataOut.flush();
-
             DataIn in = DataIn.fromStandardStream(dataIn);
+
+            sendCommand(new Command(Command.Type.GET_METADATA), dataOut);
 
             CommandResponse response = CommandResponseDecoder.decode(in);
 
             if (response instanceof MetadataCommandResponse metaCommandResp) {
-                MetadataState metaState = metaCommandResp.state();
-                System.out.println(metaState.asStr());
+                return metaCommandResp.state();
             } else {
-                System.err.println("Invalid response type");
+                throw new IllegalStateException("Can't obtain metadata from broker.");
             }
-        } catch (UnknownHostException ex) {
-            System.out.println("Server not found: " + ex.getMessage());
-        } catch (IOException ex) {
-            System.out.println("I/O error: " + ex.getMessage());
-        } finally {
-            closeSocket(socket);
         }
     }
 
@@ -78,7 +104,7 @@ public class SimpleBlockingClientMain {
     }
 
     private Socket connect(BrokerHost broker) {
-        Socket socket = null;
+        Socket socket;
         try {
             socket = new Socket(broker.host(), broker.port());
             return socket;

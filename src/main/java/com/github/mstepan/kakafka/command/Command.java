@@ -11,6 +11,8 @@ public record Command(Type type) {
     }
 
     public enum Type {
+        CREATE_TOPIC(2),
+
         GET_METADATA(1),
         EXIT(0);
 

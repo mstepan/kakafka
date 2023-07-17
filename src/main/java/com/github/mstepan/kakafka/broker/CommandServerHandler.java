@@ -35,6 +35,8 @@ public class CommandServerHandler extends ChannelInboundHandlerAdapter {
                 System.out.printf("[%s] metadata state obtained from 'etcd' %n", brokerName);
 
                 ctx.writeAndFlush(new MetadataCommandResponse(state));
+            } else if (command.type() == Command.Type.CREATE_TOPIC) {
+                System.out.printf("[%s] 'create_topic'command received %n", brokerName);
             }
         } finally {
             ReferenceCountUtil.release(msg);
