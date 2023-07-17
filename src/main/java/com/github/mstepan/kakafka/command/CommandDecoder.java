@@ -14,14 +14,6 @@ public final class CommandDecoder extends ReplayingDecoder<Void> {
     }
 
     public static Command decode(DataIn in) {
-        int typeMarker = in.readInt();
-
-        CommandMarker marker = CommandMarker.fromIntValue(typeMarker);
-
-        return switch (marker) {
-            case EXIT -> new ExitCommand();
-            case GET_METADATA -> new GetMetadataCommand();
-            case CREATE_TOPIC -> new CreateTopicCommand();
-        };
+        return Command.decode(in);
     }
 }
