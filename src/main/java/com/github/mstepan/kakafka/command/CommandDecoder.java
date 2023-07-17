@@ -6,15 +6,15 @@ import io.netty.channel.ChannelHandlerContext;
 import io.netty.handler.codec.ReplayingDecoder;
 import java.util.List;
 
-public final class KakafkaCommandDecoder extends ReplayingDecoder<Void> {
+public final class CommandDecoder extends ReplayingDecoder<Void> {
 
     @Override
     protected void decode(ChannelHandlerContext ctx, ByteBuf in, List<Object> out) {
         out.add(decode(DataIn.fromNettyByteBuf(in)));
     }
 
-    public static KakafkaCommand decode(DataIn in) {
+    public static Command decode(DataIn in) {
         int typeMarker = in.readInt();
-        return new KakafkaCommand(KakafkaCommand.Type.fromMarker(typeMarker));
+        return new Command(Command.Type.fromMarker(typeMarker));
     }
 }

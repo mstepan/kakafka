@@ -1,7 +1,7 @@
 package com.github.mstepan.kakafka.client;
 
 import com.github.mstepan.kakafka.broker.core.MetadataState;
-import com.github.mstepan.kakafka.command.GetMetadataResponse;
+import com.github.mstepan.kakafka.command.MetadataCommandResponse;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelInboundHandlerAdapter;
 import io.netty.util.ReferenceCountUtil;
@@ -17,7 +17,7 @@ public class CommandClientHandler extends ChannelInboundHandlerAdapter {
     @Override
     public void channelRead(ChannelHandlerContext ctx, Object msg) {
         try {
-            if (msg instanceof GetMetadataResponse metaResp) {
+            if (msg instanceof MetadataCommandResponse metaResp) {
                 metaChannel.set(metaResp.state());
             } else {
                 System.err.println("Unknown response detected");

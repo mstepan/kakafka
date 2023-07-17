@@ -49,7 +49,7 @@ public final class CommandResponseDecoder extends ReplayingDecoder<Void> {
 
                 brokers.add(new LiveBroker(brokerId, brokerUrl));
             }
-            return new GetMetadataResponse(new MetadataState(brokerName, brokers));
+            return new MetadataCommandResponse(new MetadataState(brokerName, brokers));
         } else {
             throw new IllegalStateException("Unknown marker type detected: " + marker);
         }

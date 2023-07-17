@@ -5,15 +5,14 @@ import io.netty.buffer.ByteBuf;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.handler.codec.MessageToByteEncoder;
 
-public final class KakafkaCommandEncoder extends MessageToByteEncoder<KakafkaCommand> {
+public final class CommandEncoder extends MessageToByteEncoder<Command> {
 
     @Override
-    protected void encode(ChannelHandlerContext ctx, KakafkaCommand msg, ByteBuf buf) {
-        buf.writeInt(msg.type().marker());
+    protected void encode(ChannelHandlerContext ctx, Command msg, ByteBuf buf) {
         encode(DataOut.fromNettyByteBuf(buf), msg);
     }
 
-    public static void encode(DataOut out, KakafkaCommand msg) {
+    public static void encode(DataOut out, Command msg) {
         out.writeInt(msg.type().marker());
     }
 }

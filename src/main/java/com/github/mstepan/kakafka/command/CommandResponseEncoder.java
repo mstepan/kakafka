@@ -13,7 +13,7 @@ public final class CommandResponseEncoder extends MessageToByteEncoder<CommandRe
 
         DataOut out = DataOut.fromNettyByteBuf(buf);
 
-        if (msg instanceof GetMetadataResponse metadataResp) {
+        if (msg instanceof MetadataCommandResponse metadataResp) {
 
             //
             // | MARKER, int | <leader broker name length>, int | <leader broker name chars>

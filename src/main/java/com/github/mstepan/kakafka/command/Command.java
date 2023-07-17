@@ -1,13 +1,13 @@
 package com.github.mstepan.kakafka.command;
 
-public record KakafkaCommand(Type type) {
+public record Command(Type type) {
 
-    public static KakafkaCommand metadataCommand() {
-        return new KakafkaCommand(Type.GET_METADATA);
+    public static Command metadataCommand() {
+        return new Command(Type.GET_METADATA);
     }
 
-    public static KakafkaCommand exitCommand() {
-        return new KakafkaCommand(Type.EXIT);
+    public static Command exitCommand() {
+        return new Command(Type.EXIT);
     }
 
     public enum Type {

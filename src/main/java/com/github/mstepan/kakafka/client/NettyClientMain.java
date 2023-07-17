@@ -2,9 +2,9 @@ package com.github.mstepan.kakafka.client;
 
 import com.github.mstepan.kakafka.broker.core.LiveBroker;
 import com.github.mstepan.kakafka.broker.core.MetadataState;
+import com.github.mstepan.kakafka.command.Command;
+import com.github.mstepan.kakafka.command.CommandEncoder;
 import com.github.mstepan.kakafka.command.CommandResponseDecoder;
-import com.github.mstepan.kakafka.command.KakafkaCommand;
-import com.github.mstepan.kakafka.command.KakafkaCommandEncoder;
 import io.netty.bootstrap.Bootstrap;
 import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelInitializer;
@@ -47,7 +47,7 @@ public class NettyClientMain {
 
                             ch.pipeline()
                                     .addLast(
-                                            new KakafkaCommandEncoder(),
+                                            new CommandEncoder(),
                                             new CommandResponseDecoder(),
                                             new CommandClientHandler(metaChannel));
                         }
@@ -56,17 +56,13 @@ public class NettyClientMain {
             // Start the client.
             ChannelFuture connectFuture = bootstrap.connect(host, port).sync();
 
-            connectFuture.channel().writeAndFlush(KakafkaCommand.metadataCommand()).sync();
+            connectFuture.channel().writeAndFlush(Command.metadataCommand()).sync();
 
             MetadataState state = metaChannel.get();
 
-            System.out.printf("leader broker: %s%n", state.leaderUrl());
+            System.out.println(state.asStr());
 
-            for (LiveBroker broker : state.brokers()) {
-                System.out.printf("id: %s, url: %s %n", broker.id(), broker.url());
-            }
-
-            connectFuture.channel().writeAndFlush(KakafkaCommand.exitCommand()).sync();
+            connectFuture.channel().writeAndFlush(Command.exitCommand()).sync();
 
             // Wait until the connection is closed.
             connectFuture.channel().closeFuture().sync();

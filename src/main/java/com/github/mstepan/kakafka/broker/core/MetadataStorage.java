@@ -30,6 +30,10 @@ public class MetadataStorage {
 
         List<LiveBroker> liveBrokers = new ArrayList<>();
 
+        // todo: we should query metadata state in background thread
+        // todo: here we just need to obtain in-memory data and send back to client, b/c blockign
+        // calls inside
+        // todo: netty event loop is considered as bad practice
         try (Client client = Client.builder().endpoints(config.etcdEndpoint()).build();
                 KV kvClient = client.getKVClient()) {
 

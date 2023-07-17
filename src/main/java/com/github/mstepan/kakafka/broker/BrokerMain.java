@@ -4,8 +4,8 @@ import com.github.mstepan.kakafka.broker.core.BrokerNameFactory;
 import com.github.mstepan.kakafka.broker.core.MetadataStorage;
 import com.github.mstepan.kakafka.broker.etcd.KeepAliveAndLeaderElectionTask;
 import com.github.mstepan.kakafka.broker.utils.DaemonThreadFactory;
+import com.github.mstepan.kakafka.command.CommandDecoder;
 import com.github.mstepan.kakafka.command.CommandResponseEncoder;
-import com.github.mstepan.kakafka.command.KakafkaCommandDecoder;
 import io.netty.bootstrap.ServerBootstrap;
 import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelInitializer;
@@ -88,7 +88,7 @@ public class BrokerMain {
                                 public void initChannel(SocketChannel ch) {
                                     ch.pipeline()
                                             .addLast(
-                                                    new KakafkaCommandDecoder(),
+                                                    new CommandDecoder(),
                                                     new CommandResponseEncoder(),
                                                     new CommandServerHandler(
                                                             config.brokerName(), metadata));

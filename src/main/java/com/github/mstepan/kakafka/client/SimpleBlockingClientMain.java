@@ -2,11 +2,11 @@ package com.github.mstepan.kakafka.client;
 
 import com.github.mstepan.kakafka.broker.core.LiveBroker;
 import com.github.mstepan.kakafka.broker.core.MetadataState;
+import com.github.mstepan.kakafka.command.Command;
+import com.github.mstepan.kakafka.command.CommandEncoder;
 import com.github.mstepan.kakafka.command.CommandResponse;
 import com.github.mstepan.kakafka.command.CommandResponseDecoder;
-import com.github.mstepan.kakafka.command.GetMetadataResponse;
-import com.github.mstepan.kakafka.command.KakafkaCommand;
-import com.github.mstepan.kakafka.command.KakafkaCommandEncoder;
+import com.github.mstepan.kakafka.command.MetadataCommandResponse;
 import com.github.mstepan.kakafka.io.DataIn;
 import com.github.mstepan.kakafka.io.DataOut;
 import java.io.DataInputStream;
@@ -31,26 +31,17 @@ public class SimpleBlockingClientMain {
                 DataOutputStream dataOut = new DataOutputStream(socket.getOutputStream());
                 DataInputStream dataIn = new DataInputStream(socket.getInputStream())) {
 
-            KakafkaCommandEncoder.encode(
-                    DataOut.fromStandardStream(dataOut),
-                    new KakafkaCommand(KakafkaCommand.Type.GET_METADATA));
+            CommandEncoder.encode(
+                    DataOut.fromStandardStream(dataOut), new Command(Command.Type.GET_METADATA));
             dataOut.flush();
 
             DataIn in = DataIn.fromStandardStream(dataIn);
 
             CommandResponse response = CommandResponseDecoder.decode(in);
 
-            if (response instanceof GetMetadataResponse metaCommandResp) {
-
+            if (response instanceof MetadataCommandResponse metaCommandResp) {
                 MetadataState metaState = metaCommandResp.state();
-
-                System.out.printf(
-                        "leader name:%s, url: %s %n",
-                        metaState.leaderBrokerName(), metaState.leaderUrl());
-
-                for (LiveBroker broker : metaState.brokers()) {
-                    System.out.printf("id: %s, url: %s %n", broker.id(), broker.url());
-                }
+                System.out.println(metaState.asStr());
             } else {
                 System.err.println("Invalid response type");
             }
