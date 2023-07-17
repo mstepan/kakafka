@@ -41,7 +41,7 @@ public class SimpleBlockingClientMain {
         }
         try {
             MetadataState metaState = getMetadata(socket);
-            //          System.out.println(metaState.asStr());
+            System.out.println(metaState.asStr());
 
             Socket leader =
                     connect(

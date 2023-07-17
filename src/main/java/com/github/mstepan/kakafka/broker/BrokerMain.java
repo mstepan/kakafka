@@ -3,6 +3,9 @@ package com.github.mstepan.kakafka.broker;
 import com.github.mstepan.kakafka.broker.core.BrokerNameFactory;
 import com.github.mstepan.kakafka.broker.core.MetadataStorage;
 import com.github.mstepan.kakafka.broker.etcd.KeepAliveAndLeaderElectionTask;
+import com.github.mstepan.kakafka.broker.handlers.CreateTopicCommandServerHandler;
+import com.github.mstepan.kakafka.broker.handlers.ExitCommandServerHandler;
+import com.github.mstepan.kakafka.broker.handlers.GetMetadataCommandServerHandler;
 import com.github.mstepan.kakafka.broker.utils.DaemonThreadFactory;
 import com.github.mstepan.kakafka.command.CommandDecoder;
 import com.github.mstepan.kakafka.command.response.CommandResponseEncoder;
@@ -90,8 +93,12 @@ public class BrokerMain {
                                             .addLast(
                                                     new CommandDecoder(),
                                                     new CommandResponseEncoder(),
-                                                    new CommandServerHandler(
-                                                            config.brokerName(), metadata));
+                                                    new ExitCommandServerHandler(
+                                                            config.brokerName()),
+                                                    new GetMetadataCommandServerHandler(
+                                                            config.brokerName(), metadata),
+                                                    new CreateTopicCommandServerHandler(
+                                                            config.brokerName()));
                                 }
                             })
                     // The number of connections to be queued.

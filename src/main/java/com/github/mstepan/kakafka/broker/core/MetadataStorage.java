@@ -4,13 +4,12 @@ import com.github.mstepan.kakafka.broker.BrokerConfig;
 import com.github.mstepan.kakafka.broker.utils.EtcdUtils;
 import io.etcd.jetcd.Client;
 import io.etcd.jetcd.KV;
-import io.etcd.jetcd.KeyValue;
 import io.etcd.jetcd.kv.GetResponse;
 import io.etcd.jetcd.options.GetOption;
-import java.nio.charset.StandardCharsets;
-import java.util.ArrayList;
-import java.util.List;
+import java.util.Objects;
+import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutionException;
+import java.util.concurrent.atomic.AtomicReference;
 
 public class MetadataStorage {
 
@@ -20,46 +19,38 @@ public class MetadataStorage {
         this.config = config;
     }
 
-    private volatile String leaderBrokerName;
+    private final AtomicReference<String> leaderBrokerNameRef = new AtomicReference<>();
 
     public void setLeader(String brokerName) {
-        this.leaderBrokerName = brokerName;
+        Objects.requireNonNull(brokerName, "null 'brokerName' during set operation");
+        this.leaderBrokerNameRef.set(brokerName);
     }
 
-    public MetadataState getMetadataState() {
+    public String getLeaderBrokerName() {
+        String leaderBrokerName = leaderBrokerNameRef.get();
+        Objects.requireNonNull(leaderBrokerName, "null 'leaderBrokerName' during get operation");
+        return leaderBrokerName;
+    }
 
-        List<LiveBroker> liveBrokers = new ArrayList<>();
-
+    public CompletableFuture<GetResponse> getMetadataState() {
+        //
         // todo: we should query metadata state in background thread
-        // todo: here we just need to obtain in-memory data and send back to client, b/c blockign
-        // calls inside
-        // todo: netty event loop is considered as bad practice
-        try (Client client = Client.builder().endpoints(config.etcdEndpoint()).build();
-                KV kvClient = client.getKVClient()) {
-
-            GetResponse getResp =
-                    kvClient.get(
-                                    EtcdUtils.toByteSeq(BrokerConfig.BROKER_KEY_PREFIX),
-                                    GetOption.newBuilder().isPrefix(true).build())
-                            .get();
-
-            for (KeyValue keyValue : getResp.getKvs()) {
-
-                String brokerIdPath = keyValue.getKey().toString(StandardCharsets.US_ASCII);
-
-                final String brokerName = brokerIdPath.substring(brokerIdPath.lastIndexOf("/") + 1);
-                final String brokerUrl = keyValue.getValue().toString(StandardCharsets.US_ASCII);
-
-                liveBrokers.add(new LiveBroker(brokerName, brokerUrl));
-            }
-
-        } catch (InterruptedException interEx) {
-            interEx.printStackTrace();
-            Thread.currentThread().interrupt();
-        } catch (ExecutionException execEx) {
-            execEx.printStackTrace();
-        }
-
-        return new MetadataState(leaderBrokerName, liveBrokers);
+        // todo: here we just need to obtain in-memory data and send back to client
+        //
+        return CompletableFuture.supplyAsync(
+                () -> {
+                    try (Client client = Client.builder().endpoints(config.etcdEndpoint()).build();
+                            KV kvClient = client.getKVClient()) {
+                        try {
+                            return kvClient.get(
+                                            EtcdUtils.toByteSeq(BrokerConfig.BROKER_KEY_PREFIX),
+                                            GetOption.newBuilder().isPrefix(true).build())
+                                    .get();
+                        } catch (InterruptedException | ExecutionException ex) {
+                            ex.printStackTrace();
+                            return null;
+                        }
+                    }
+                });
     }
 }

@@ -10,7 +10,9 @@ public record MetadataState(String leaderBrokerName, List<LiveBroker> brokers) {
                 return broker;
             }
         }
-        throw new IllegalStateException("Can't find leader broker in a list of active brokers");
+        throw new IllegalStateException(
+                "Can't find leader broker id (%s) in a list of active brokers"
+                        .formatted(leaderBrokerName));
     }
 
     public String asStr() {

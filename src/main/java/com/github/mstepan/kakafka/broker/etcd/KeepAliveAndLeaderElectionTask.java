@@ -109,7 +109,12 @@ public class KeepAliveAndLeaderElectionTask implements Runnable {
                     "[%s] Leader selected, key = '%s', value = '%s' %n",
                     config.brokerName(), leaderKeyAndValue.getKey(), leaderKeyAndValue.getValue());
 
-            metadata.setLeader(leaderKeyAndValue.getValue().toString(StandardCharsets.US_ASCII));
+            final String leaderName =
+                    leaderKeyAndValue.getValue().toString(StandardCharsets.US_ASCII);
+            metadata.setLeader(leaderName);
+
+            System.out.printf(
+                    "[%s] MetadataStorage leader set to '%s'%n", config.brokerName(), leaderName);
         }
 
         @Override
