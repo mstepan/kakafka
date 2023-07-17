@@ -14,8 +14,8 @@ public interface Command {
         CommandMarker marker = CommandMarker.fromIntValue(typeMarker);
 
         return switch (marker) {
-            case EXIT -> new ExitCommand(in);
-            case GET_METADATA -> new GetMetadataCommand(in);
+            case EXIT -> new ExitCommand();
+            case GET_METADATA -> new GetMetadataCommand();
             case CREATE_TOPIC -> new CreateTopicCommand(in);
         };
     }
