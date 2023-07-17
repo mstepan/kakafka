@@ -1,4 +1,4 @@
-package com.github.mstepan.kakafka.command;
+package com.github.mstepan.kakafka.command.response;
 
 import com.github.mstepan.kakafka.broker.core.MetadataState;
 

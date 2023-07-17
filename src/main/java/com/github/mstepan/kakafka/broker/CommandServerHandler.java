@@ -6,7 +6,7 @@ import com.github.mstepan.kakafka.command.Command;
 import com.github.mstepan.kakafka.command.CreateTopicCommand;
 import com.github.mstepan.kakafka.command.ExitCommand;
 import com.github.mstepan.kakafka.command.GetMetadataCommand;
-import com.github.mstepan.kakafka.command.MetadataCommandResponse;
+import com.github.mstepan.kakafka.command.response.MetadataCommandResponse;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelInboundHandlerAdapter;
 import io.netty.util.ReferenceCountUtil;
@@ -27,10 +27,10 @@ public class CommandServerHandler extends ChannelInboundHandlerAdapter {
         try {
             Command command = (Command) msg;
 
-            if (command instanceof ExitCommand exitCommand) {
+            if (command instanceof ExitCommand) {
                 System.out.printf("[%s] 'exit' command received %n", brokerName);
                 ctx.close();
-            } else if (command instanceof GetMetadataCommand metadataCommand) {
+            } else if (command instanceof GetMetadataCommand) {
                 System.out.printf("[%s] 'get_metadata' command received %n", brokerName);
 
                 MetadataState state = metadata.getMetadataState();

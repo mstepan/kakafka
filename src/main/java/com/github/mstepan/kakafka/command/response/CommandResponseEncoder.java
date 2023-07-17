@@ -1,6 +1,7 @@
-package com.github.mstepan.kakafka.command;
+package com.github.mstepan.kakafka.command.response;
 
 import com.github.mstepan.kakafka.broker.core.LiveBroker;
+import com.github.mstepan.kakafka.command.CommandMarker;
 import com.github.mstepan.kakafka.io.DataOut;
 import io.netty.buffer.ByteBuf;
 import io.netty.channel.ChannelHandlerContext;
@@ -18,7 +19,7 @@ public final class CommandResponseEncoder extends MessageToByteEncoder<CommandRe
             //
             // | MARKER, int | <leader broker name length>, int | <leader broker name chars>
             //
-            out.writeInt(CommandResponse.GET_METADATA_MARKER);
+            out.writeInt(CommandMarker.GET_METADATA.value());
 
             out.writeString(metadataResp.state().leaderBrokerName());
 

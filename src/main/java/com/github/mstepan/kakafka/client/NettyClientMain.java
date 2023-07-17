@@ -2,9 +2,9 @@ package com.github.mstepan.kakafka.client;
 
 import com.github.mstepan.kakafka.broker.core.MetadataState;
 import com.github.mstepan.kakafka.command.CommandEncoder;
-import com.github.mstepan.kakafka.command.CommandResponseDecoder;
 import com.github.mstepan.kakafka.command.ExitCommand;
 import com.github.mstepan.kakafka.command.GetMetadataCommand;
+import com.github.mstepan.kakafka.command.response.CommandResponseDecoder;
 import io.netty.bootstrap.Bootstrap;
 import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelInitializer;

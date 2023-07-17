@@ -3,11 +3,11 @@ package com.github.mstepan.kakafka.client;
 import com.github.mstepan.kakafka.broker.core.MetadataState;
 import com.github.mstepan.kakafka.command.Command;
 import com.github.mstepan.kakafka.command.CommandEncoder;
-import com.github.mstepan.kakafka.command.CommandResponse;
-import com.github.mstepan.kakafka.command.CommandResponseDecoder;
 import com.github.mstepan.kakafka.command.CreateTopicCommand;
 import com.github.mstepan.kakafka.command.GetMetadataCommand;
-import com.github.mstepan.kakafka.command.MetadataCommandResponse;
+import com.github.mstepan.kakafka.command.response.CommandResponse;
+import com.github.mstepan.kakafka.command.response.CommandResponseDecoder;
+import com.github.mstepan.kakafka.command.response.MetadataCommandResponse;
 import com.github.mstepan.kakafka.io.DataIn;
 import com.github.mstepan.kakafka.io.DataOut;
 import java.io.DataInputStream;
@@ -41,7 +41,7 @@ public class SimpleBlockingClientMain {
         }
         try {
             MetadataState metaState = getMetadata(socket);
-//            System.out.println(metaState.asStr());
+            //          System.out.println(metaState.asStr());
 
             Socket leader =
                     connect(

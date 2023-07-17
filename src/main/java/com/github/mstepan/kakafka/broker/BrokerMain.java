@@ -5,7 +5,7 @@ import com.github.mstepan.kakafka.broker.core.MetadataStorage;
 import com.github.mstepan.kakafka.broker.etcd.KeepAliveAndLeaderElectionTask;
 import com.github.mstepan.kakafka.broker.utils.DaemonThreadFactory;
 import com.github.mstepan.kakafka.command.CommandDecoder;
-import com.github.mstepan.kakafka.command.CommandResponseEncoder;
+import com.github.mstepan.kakafka.command.response.CommandResponseEncoder;
 import io.netty.bootstrap.ServerBootstrap;
 import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelInitializer;

@@ -1,7 +1,7 @@
 package com.github.mstepan.kakafka.client;
 
 import com.github.mstepan.kakafka.broker.core.MetadataState;
-import com.github.mstepan.kakafka.command.MetadataCommandResponse;
+import com.github.mstepan.kakafka.command.response.MetadataCommandResponse;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelInboundHandlerAdapter;
 import io.netty.util.ReferenceCountUtil;

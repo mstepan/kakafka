@@ -1,7 +1,8 @@
-package com.github.mstepan.kakafka.command;
+package com.github.mstepan.kakafka.command.response;
 
 import com.github.mstepan.kakafka.broker.core.LiveBroker;
 import com.github.mstepan.kakafka.broker.core.MetadataState;
+import com.github.mstepan.kakafka.command.CommandMarker;
 import com.github.mstepan.kakafka.io.DataIn;
 import io.netty.buffer.ByteBuf;
 import io.netty.channel.ChannelHandlerContext;
@@ -21,7 +22,7 @@ public final class CommandResponseDecoder extends ReplayingDecoder<Void> {
         // read marker 'int' value
         int marker = in.readInt();
 
-        if (marker == CommandResponse.GET_METADATA_MARKER) {
+        if (marker == CommandMarker.GET_METADATA.value()) {
 
             // read 'brokerName' length value
             int brokerNameLength = in.readInt();
