@@ -17,6 +17,8 @@ import java.util.List;
 
 public class SimpleBlockingClientMain {
 
+    private static final int NO_AVAILABLE_BROKERS_EXIT_CODE = 3;
+
     private static final List<BrokerHost> seedBrokers =
             List.of(
                     new BrokerHost("localhost", 9091),
@@ -29,42 +31,50 @@ public class SimpleBlockingClientMain {
 
     public void run() {
 
+        Socket socket = findAvailableBroker();
+
+        if (socket == null) {
+            System.err.println("All brokers are DOWN!!!");
+            System.exit(NO_AVAILABLE_BROKERS_EXIT_CODE);
+        }
+
+        try (DataOutputStream dataOut = new DataOutputStream(socket.getOutputStream());
+                DataInputStream dataIn = new DataInputStream(socket.getInputStream())) {
+
+            CommandEncoder.encode(
+                    DataOut.fromStandardStream(dataOut), new Command(Command.Type.GET_METADATA));
+            dataOut.flush();
+
+            DataIn in = DataIn.fromStandardStream(dataIn);
+
+            CommandResponse response = CommandResponseDecoder.decode(in);
+
+            if (response instanceof MetadataCommandResponse metaCommandResp) {
+                MetadataState metaState = metaCommandResp.state();
+                System.out.println(metaState.asStr());
+            } else {
+                System.err.println("Invalid response type");
+            }
+        } catch (UnknownHostException ex) {
+            System.out.println("Server not found: " + ex.getMessage());
+        } catch (IOException ex) {
+            System.out.println("I/O error: " + ex.getMessage());
+        } finally {
+            closeSocket(socket);
+        }
+    }
+
+    private Socket findAvailableBroker() {
         for (BrokerHost curBrokerHost : seedBrokers) {
 
             Socket socket = connect(curBrokerHost);
 
             if (socket != null) {
-                try (DataOutputStream dataOut = new DataOutputStream(socket.getOutputStream());
-                        DataInputStream dataIn = new DataInputStream(socket.getInputStream())) {
-
-                    CommandEncoder.encode(
-                            DataOut.fromStandardStream(dataOut),
-                            new Command(Command.Type.GET_METADATA));
-                    dataOut.flush();
-
-                    DataIn in = DataIn.fromStandardStream(dataIn);
-
-                    CommandResponse response = CommandResponseDecoder.decode(in);
-
-                    if (response instanceof MetadataCommandResponse metaCommandResp) {
-                        MetadataState metaState = metaCommandResp.state();
-                        System.out.println(metaState.asStr());
-                    } else {
-                        System.err.println("Invalid response type");
-                    }
-                } catch (UnknownHostException ex) {
-                    System.out.println("Server not found: " + ex.getMessage());
-                } catch (IOException ex) {
-                    System.out.println("I/O error: " + ex.getMessage());
-                } finally {
-                    closeSocket(socket);
-                }
-
-                return;
+                return socket;
             }
         }
 
-        System.err.println("All brokers are DOWN!!!");
+        return null;
     }
 
     private Socket connect(BrokerHost broker) {
