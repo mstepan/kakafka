@@ -31,6 +31,9 @@ public class CommandServerHandler extends ChannelInboundHandlerAdapter {
                 System.out.printf("[%s] 'get_metadata' command received %n", brokerName);
 
                 MetadataState state = metadata.getMetadataState();
+
+                System.out.printf("[%s] metadata state obtained from 'etcd' %n", brokerName);
+
                 ctx.writeAndFlush(new GetMetadataResponse(state));
             }
         } finally {

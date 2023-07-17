@@ -32,8 +32,6 @@ public class SimpleBlockingClientMain {
             dataOut.writeInt(KakafkaCommand.Type.GET_METADATA.marker());
             dataOut.flush();
 
-            System.out.println("Metadata request sent");
-
             DataIn in = DataIn.fromStandardStream(dataIn);
 
             CommandResponse response = CommandResponseDecoder.decode(in);
@@ -50,7 +48,7 @@ public class SimpleBlockingClientMain {
                     System.out.printf("id: %s, url: %s %n", broker.id(), broker.url());
                 }
             } else {
-                System.err.println("Invalid reponse type");
+                System.err.println("Invalid response type");
             }
         } catch (UnknownHostException ex) {
             System.out.println("Server not found: " + ex.getMessage());

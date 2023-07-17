@@ -1,15 +1,17 @@
 package com.github.mstepan.kakafka.command;
 
 import com.github.mstepan.kakafka.broker.core.LiveBroker;
+import com.github.mstepan.kakafka.io.DataOut;
 import io.netty.buffer.ByteBuf;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.handler.codec.MessageToByteEncoder;
-import java.nio.charset.StandardCharsets;
 import java.util.List;
 
 public final class CommandResponseEncoder extends MessageToByteEncoder<CommandResponse> {
     @Override
-    protected void encode(ChannelHandlerContext ctx, CommandResponse msg, ByteBuf out) {
+    protected void encode(ChannelHandlerContext ctx, CommandResponse msg, ByteBuf buf) {
+
+        DataOut out = DataOut.fromNettyByteBuf(buf);
 
         if (msg instanceof GetMetadataResponse metadataResp) {
 
@@ -18,7 +20,7 @@ public final class CommandResponseEncoder extends MessageToByteEncoder<CommandRe
             //
             out.writeInt(CommandResponse.GET_METADATA_MARKER);
 
-            writeString(out, metadataResp.state().leaderBrokerName());
+            out.writeString(metadataResp.state().leaderBrokerName());
 
             //
             // | <live brokers count>, int | <broker-1> | ... | <broker-n> |
@@ -31,14 +33,14 @@ public final class CommandResponseEncoder extends MessageToByteEncoder<CommandRe
                 // | <broker id length>, int | <broker id chars> | <broker url length>, int |
                 // <broker url chars |
                 //
-                writeString(out, singleBroker.id());
-                writeString(out, singleBroker.url());
+                out.writeString(singleBroker.id());
+                out.writeString(singleBroker.url());
             }
         }
     }
 
-    private static void writeString(ByteBuf out, String value) {
-        out.writeInt(value.length());
-        out.writeCharSequence(value, StandardCharsets.US_ASCII);
-    }
+    //    private static void writeString(ByteBuf out, String value) {
+    //        out.writeInt(value.length());
+    //        out.writeCharSequence(value, StandardCharsets.US_ASCII);
+    //    }
 }
