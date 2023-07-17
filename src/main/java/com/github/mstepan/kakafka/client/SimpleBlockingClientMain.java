@@ -13,41 +13,77 @@ import java.io.DataOutputStream;
 import java.io.IOException;
 import java.net.Socket;
 import java.net.UnknownHostException;
+import java.util.List;
 
 public class SimpleBlockingClientMain {
 
-    private static final String HOST = "localhost";
-
-    private static final int PORT = 9091;
+    private static final List<BrokerHost> seedBrokers =
+            List.of(
+                    new BrokerHost("localhost", 9091),
+                    new BrokerHost("localhost", 9092),
+                    new BrokerHost("localhost", 9093));
 
     public static void main(String[] args) throws Exception {
-        new SimpleBlockingClientMain().run(HOST, PORT);
+        new SimpleBlockingClientMain().run();
     }
 
-    public void run(String host, int port) {
+    public void run() {
 
-        try (Socket socket = new Socket(host, port);
-                DataOutputStream dataOut = new DataOutputStream(socket.getOutputStream());
-                DataInputStream dataIn = new DataInputStream(socket.getInputStream())) {
+        for (BrokerHost curBrokerHost : seedBrokers) {
 
-            CommandEncoder.encode(
-                    DataOut.fromStandardStream(dataOut), new Command(Command.Type.GET_METADATA));
-            dataOut.flush();
+            Socket socket = connect(curBrokerHost);
 
-            DataIn in = DataIn.fromStandardStream(dataIn);
+            if (socket != null) {
+                try (DataOutputStream dataOut = new DataOutputStream(socket.getOutputStream());
+                        DataInputStream dataIn = new DataInputStream(socket.getInputStream())) {
 
-            CommandResponse response = CommandResponseDecoder.decode(in);
+                    CommandEncoder.encode(
+                            DataOut.fromStandardStream(dataOut),
+                            new Command(Command.Type.GET_METADATA));
+                    dataOut.flush();
 
-            if (response instanceof MetadataCommandResponse metaCommandResp) {
-                MetadataState metaState = metaCommandResp.state();
-                System.out.println(metaState.asStr());
-            } else {
-                System.err.println("Invalid response type");
+                    DataIn in = DataIn.fromStandardStream(dataIn);
+
+                    CommandResponse response = CommandResponseDecoder.decode(in);
+
+                    if (response instanceof MetadataCommandResponse metaCommandResp) {
+                        MetadataState metaState = metaCommandResp.state();
+                        System.out.println(metaState.asStr());
+                    } else {
+                        System.err.println("Invalid response type");
+                    }
+                } catch (UnknownHostException ex) {
+                    System.out.println("Server not found: " + ex.getMessage());
+                } catch (IOException ex) {
+                    System.out.println("I/O error: " + ex.getMessage());
+                } finally {
+                    closeSocket(socket);
+                }
+
+                return;
             }
-        } catch (UnknownHostException ex) {
-            System.out.println("Server not found: " + ex.getMessage());
-        } catch (IOException ex) {
-            System.out.println("I/O error: " + ex.getMessage());
+        }
+
+        System.err.println("All brokers are DOWN!!!");
+    }
+
+    private Socket connect(BrokerHost broker) {
+        Socket socket = null;
+        try {
+            socket = new Socket(broker.host(), broker.port());
+            return socket;
+        } catch (IOException ioEx) {
+            return null;
+        }
+    }
+
+    private void closeSocket(Socket socket) {
+        if (socket != null) {
+            try {
+                socket.close();
+            } catch (IOException ioEx) {
+                throw new IllegalStateException("Can't properly close the Socket", ioEx);
+            }
         }
     }
 }
