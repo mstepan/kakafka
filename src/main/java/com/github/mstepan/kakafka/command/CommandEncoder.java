@@ -13,6 +13,7 @@ public final class CommandEncoder extends MessageToByteEncoder<Command> {
     }
 
     public static void encode(DataOut out, Command msg) {
+        out.writeInt(msg.marker().value());
         msg.encode(out);
     }
 }

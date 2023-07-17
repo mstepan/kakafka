@@ -7,10 +7,9 @@ public interface Command {
 
     CommandMarker marker();
 
-    void encode(DataOut out);
+    default void encode(DataOut out) {}
 
-    static Command decode(DataIn in) {
-        int typeMarker = in.readInt();
+    static Command decode(DataIn in, int typeMarker) {
 
         CommandMarker marker = CommandMarker.fromIntValue(typeMarker);
 

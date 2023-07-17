@@ -39,7 +39,9 @@ public class CommandServerHandler extends ChannelInboundHandlerAdapter {
 
                 ctx.writeAndFlush(new MetadataCommandResponse(state));
             } else if (command instanceof CreateTopicCommand createTopic) {
-                System.out.printf("[%s] 'create_topic'command received %n", brokerName);
+                System.out.printf(
+                        "[%s] 'create_topic'command for topic '%s' with '%d' partitions %n",
+                        brokerName, createTopic.topicName(), createTopic.partitionsCount());
             }
         } finally {
             ReferenceCountUtil.release(msg);

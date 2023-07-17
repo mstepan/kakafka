@@ -12,31 +12,35 @@ public final class CommandResponseEncoder extends MessageToByteEncoder<CommandRe
     @Override
     protected void encode(ChannelHandlerContext ctx, CommandResponse msg, ByteBuf buf) {
 
-        DataOut out = DataOut.fromNettyByteBuf(buf);
+        try {
+            DataOut out = DataOut.fromNettyByteBuf(buf);
 
-        if (msg instanceof MetadataCommandResponse metadataResp) {
+            if (msg instanceof MetadataCommandResponse metadataResp) {
 
-            //
-            // | MARKER, int | <leader broker name length>, int | <leader broker name chars>
-            //
-            out.writeInt(CommandMarker.GET_METADATA.value());
-
-            out.writeString(metadataResp.state().leaderBrokerName());
-
-            //
-            // | <live brokers count>, int | <broker-1> | ... | <broker-n> |
-            //
-            List<LiveBroker> brokers = metadataResp.state().brokers();
-            out.writeInt(brokers.size());
-
-            for (LiveBroker singleBroker : brokers) {
                 //
-                // | <broker id length>, int | <broker id chars> | <broker url length>, int |
-                // <broker url chars |
+                // | MARKER, int | <leader broker name length>, int | <leader broker name chars>
                 //
-                out.writeString(singleBroker.id());
-                out.writeString(singleBroker.url());
+                out.writeInt(CommandMarker.GET_METADATA.value());
+
+                out.writeString(metadataResp.state().leaderBrokerName());
+
+                //
+                // | <live brokers count>, int | <broker-1> | ... | <broker-n> |
+                //
+                List<LiveBroker> brokers = metadataResp.state().brokers();
+                out.writeInt(brokers.size());
+
+                for (LiveBroker singleBroker : brokers) {
+                    //
+                    // | <broker id length>, int | <broker id chars> | <broker url length>, int |
+                    // <broker url chars |
+                    //
+                    out.writeString(singleBroker.id());
+                    out.writeString(singleBroker.url());
+                }
             }
+        } catch (Exception ex) {
+            ex.printStackTrace();
         }
     }
 }

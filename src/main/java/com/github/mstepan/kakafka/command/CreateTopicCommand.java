@@ -3,12 +3,28 @@ package com.github.mstepan.kakafka.command;
 import com.github.mstepan.kakafka.io.DataIn;
 import com.github.mstepan.kakafka.io.DataOut;
 
-public record CreateTopicCommand() implements Command {
+public class CreateTopicCommand implements Command {
 
-    public CreateTopicCommand() {}
+    private String topicName;
+    private int partitionsCount;
+
+    public CreateTopicCommand(String topicName, int partitionsCount) {
+        this.topicName = topicName;
+        this.partitionsCount = partitionsCount;
+    }
+
+    public String topicName() {
+        return topicName;
+    }
+
+    public int partitionsCount() {
+        return partitionsCount;
+    }
 
     public CreateTopicCommand(DataIn in) {
-        this();
+        int topicNameLength = in.readInt();
+        topicName = in.readString(topicNameLength);
+        partitionsCount = in.readInt();
     }
 
     @Override
@@ -18,6 +34,9 @@ public record CreateTopicCommand() implements Command {
 
     @Override
     public void encode(DataOut out) {
-        out.writeInt(marker().value());
+        // do not write marker int value here, b/c it will be automatically populated by
+        // 'CommandEncoder.encode'
+        out.writeString(topicName);
+        out.writeInt(partitionsCount);
     }
 }

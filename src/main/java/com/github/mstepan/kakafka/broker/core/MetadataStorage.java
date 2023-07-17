@@ -54,6 +54,7 @@ public class MetadataStorage {
             }
 
         } catch (InterruptedException interEx) {
+            interEx.printStackTrace();
             Thread.currentThread().interrupt();
         } catch (ExecutionException execEx) {
             execEx.printStackTrace();

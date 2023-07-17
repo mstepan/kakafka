@@ -14,6 +14,7 @@ public final class CommandDecoder extends ReplayingDecoder<Void> {
     }
 
     public static Command decode(DataIn in) {
-        return Command.decode(in);
+        int typeMarker = in.readInt();
+        return Command.decode(in, typeMarker);
     }
 }
