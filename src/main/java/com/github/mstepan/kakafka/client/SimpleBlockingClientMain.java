@@ -1,7 +1,12 @@
 package com.github.mstepan.kakafka.client;
 
+import com.github.mstepan.kakafka.broker.core.LiveBroker;
+import com.github.mstepan.kakafka.broker.core.MetadataState;
 import com.github.mstepan.kakafka.command.CommandResponse;
+import com.github.mstepan.kakafka.command.CommandResponseDecoder;
+import com.github.mstepan.kakafka.command.GetMetadataResponse;
 import com.github.mstepan.kakafka.command.KakafkaCommand;
+import com.github.mstepan.kakafka.io.DataIn;
 import java.io.DataInputStream;
 import java.io.DataOutputStream;
 import java.io.IOException;
@@ -29,10 +34,23 @@ public class SimpleBlockingClientMain {
 
             System.out.println("Metadata request sent");
 
-            int marker = dataIn.readInt();
+            DataIn in = DataIn.fromStandardStream(dataIn);
 
-            if (marker == CommandResponse.GET_METADATA_MARKER) {
-                System.out.println("Metadat response received");
+            CommandResponse response = CommandResponseDecoder.decode(in);
+
+            if (response instanceof GetMetadataResponse metaCommandResp) {
+
+                MetadataState metaState = metaCommandResp.state();
+
+                System.out.printf(
+                        "leader name:%s, url: %s %n",
+                        metaState.leaderBrokerName(), metaState.leaderUrl());
+
+                for (LiveBroker broker : metaState.brokers()) {
+                    System.out.printf("id: %s, url: %s %n", broker.id(), broker.url());
+                }
+            } else {
+                System.err.println("Invalid reponse type");
             }
         } catch (UnknownHostException ex) {
             System.out.println("Server not found: " + ex.getMessage());

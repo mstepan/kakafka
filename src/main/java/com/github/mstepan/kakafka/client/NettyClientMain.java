@@ -1,5 +1,6 @@
 package com.github.mstepan.kakafka.client;
 
+import com.github.mstepan.kakafka.broker.core.LiveBroker;
 import com.github.mstepan.kakafka.broker.core.MetadataState;
 import com.github.mstepan.kakafka.command.CommandResponseDecoder;
 import com.github.mstepan.kakafka.command.KakafkaCommand;
@@ -12,20 +13,25 @@ import io.netty.channel.EventLoopGroup;
 import io.netty.channel.nio.NioEventLoopGroup;
 import io.netty.channel.socket.SocketChannel;
 import io.netty.channel.socket.nio.NioSocketChannel;
+import io.netty.util.ResourceLeakDetector;
 
-public class ClientMain {
+public class NettyClientMain {
 
     private static final String HOST = "localhost";
 
     private static final int PORT = 9091;
 
     public static void main(String[] args) throws Exception {
-        new ClientMain().run(HOST, PORT);
+        new NettyClientMain().run(HOST, PORT);
     }
 
     public void run(String host, int port) throws Exception {
 
         SynchChannel<MetadataState> metaChannel = new SynchChannel<>();
+
+        // leak detector
+        // https://netty.io/wiki/reference-counted-objects.html
+        ResourceLeakDetector.setLevel(ResourceLeakDetector.Level.PARANOID);
 
         EventLoopGroup workerGroup = new NioEventLoopGroup();
 
@@ -52,9 +58,13 @@ public class ClientMain {
 
             connectFuture.channel().writeAndFlush(KakafkaCommand.metadataCommand()).sync();
 
-            String leaderBrokerUrl = metaChannel.get().leaderUrl();
+            MetadataState state = metaChannel.get();
 
-            System.out.printf("leader broker: %s%n", leaderBrokerUrl);
+            System.out.printf("leader broker: %s%n", state.leaderUrl());
+
+            for (LiveBroker broker : state.brokers()) {
+                System.out.printf("id: %s, url: %s %n", broker.id(), broker.url());
+            }
 
             connectFuture.channel().writeAndFlush(KakafkaCommand.exitCommand()).sync();
 

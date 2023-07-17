@@ -2,18 +2,22 @@ package com.github.mstepan.kakafka.command;
 
 import com.github.mstepan.kakafka.broker.core.LiveBroker;
 import com.github.mstepan.kakafka.broker.core.MetadataState;
+import com.github.mstepan.kakafka.io.DataIn;
 import io.netty.buffer.ByteBuf;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.handler.codec.ReplayingDecoder;
-import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.List;
 
 public final class CommandResponseDecoder extends ReplayingDecoder<Void> {
 
     @Override
-    protected void decode(ChannelHandlerContext ctx, ByteBuf in, List<Object> out) {
+    protected void decode(ChannelHandlerContext ctx, ByteBuf buf, List<Object> out) {
+        DataIn in = DataIn.fromNettyByteBuf(buf);
+        out.add(decode(in));
+    }
 
+    public static CommandResponse decode(DataIn in) {
         // read marker 'int' value
         int marker = in.readInt();
 
@@ -22,8 +26,7 @@ public final class CommandResponseDecoder extends ReplayingDecoder<Void> {
             // read 'brokerName' length value
             int brokerNameLength = in.readInt();
 
-            String brokerName =
-                    in.readCharSequence(brokerNameLength, StandardCharsets.US_ASCII).toString();
+            String brokerName = in.readString(brokerNameLength);
 
             // read brokers count
             int brokersCount = in.readInt();
@@ -36,19 +39,17 @@ public final class CommandResponseDecoder extends ReplayingDecoder<Void> {
                 int brokerIdLength = in.readInt();
 
                 // read 'brokerId' chars
-                String brokerId =
-                        in.readCharSequence(brokerIdLength, StandardCharsets.US_ASCII).toString();
+                String brokerId = in.readString(brokerIdLength);
 
                 // read 'broker.url' length
                 int brokerUrlLength = in.readInt();
 
                 // read 'broker.url' chars
-                String brokerUrl =
-                        in.readCharSequence(brokerUrlLength, StandardCharsets.US_ASCII).toString();
+                String brokerUrl = in.readString(brokerUrlLength);
 
                 brokers.add(new LiveBroker(brokerId, brokerUrl));
             }
-            out.add(new GetMetadataResponse(new MetadataState(brokerName, brokers)));
+            return new GetMetadataResponse(new MetadataState(brokerName, brokers));
         } else {
             throw new IllegalStateException("Unknown marker type detected: " + marker);
         }

@@ -14,6 +14,7 @@ import io.netty.channel.EventLoopGroup;
 import io.netty.channel.nio.NioEventLoopGroup;
 import io.netty.channel.socket.SocketChannel;
 import io.netty.channel.socket.nio.NioServerSocketChannel;
+import io.netty.util.ResourceLeakDetector;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ThreadLocalRandom;
@@ -67,6 +68,9 @@ public class BrokerMain {
 
         pool.execute(new KeepAliveAndLeaderElectionTask(config, metadata));
 
+        // leak detector
+        // https://netty.io/wiki/reference-counted-objects.html
+        ResourceLeakDetector.setLevel(ResourceLeakDetector.Level.PARANOID);
         // 'boss', accepts an incoming connection
         EventLoopGroup bossGroup = new NioEventLoopGroup();
 
