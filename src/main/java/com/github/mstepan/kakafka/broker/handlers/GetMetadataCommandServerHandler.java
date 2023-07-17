@@ -37,6 +37,18 @@ public class GetMetadataCommandServerHandler extends ChannelInboundHandlerAdapte
                 metadata.getMetadataState()
                         .whenComplete(
                                 (getResp, ex) -> {
+                                    if (ex != null) {
+                                        System.out.printf(
+                                                "[%s] getting metadata state from 'etcd' FAILED %n",
+                                                brokerName);
+                                        ex.printStackTrace();
+
+                                        // TODO: write failed response here
+                                        // ctx.writeAndFlush(new MetadataCommandResponse(null));
+
+                                        return;
+                                    }
+
                                     System.out.printf(
                                             "[%s] metadata state obtained from 'etcd' %n",
                                             brokerName);
