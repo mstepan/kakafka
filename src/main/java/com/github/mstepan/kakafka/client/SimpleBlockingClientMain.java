@@ -6,7 +6,9 @@ import com.github.mstepan.kakafka.command.CommandResponse;
 import com.github.mstepan.kakafka.command.CommandResponseDecoder;
 import com.github.mstepan.kakafka.command.GetMetadataResponse;
 import com.github.mstepan.kakafka.command.KakafkaCommand;
+import com.github.mstepan.kakafka.command.KakafkaCommandEncoder;
 import com.github.mstepan.kakafka.io.DataIn;
+import com.github.mstepan.kakafka.io.DataOut;
 import java.io.DataInputStream;
 import java.io.DataOutputStream;
 import java.io.IOException;
@@ -29,7 +31,9 @@ public class SimpleBlockingClientMain {
                 DataOutputStream dataOut = new DataOutputStream(socket.getOutputStream());
                 DataInputStream dataIn = new DataInputStream(socket.getInputStream())) {
 
-            dataOut.writeInt(KakafkaCommand.Type.GET_METADATA.marker());
+            KakafkaCommandEncoder.encode(
+                    DataOut.fromStandardStream(dataOut),
+                    new KakafkaCommand(KakafkaCommand.Type.GET_METADATA));
             dataOut.flush();
 
             DataIn in = DataIn.fromStandardStream(dataIn);

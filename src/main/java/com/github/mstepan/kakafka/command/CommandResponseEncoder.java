@@ -38,9 +38,4 @@ public final class CommandResponseEncoder extends MessageToByteEncoder<CommandRe
             }
         }
     }
-
-    //    private static void writeString(ByteBuf out, String value) {
-    //        out.writeInt(value.length());
-    //        out.writeCharSequence(value, StandardCharsets.US_ASCII);
-    //    }
 }
