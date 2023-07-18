@@ -9,4 +9,9 @@ public record LiveBroker(String id, String url) {
     public int port() {
         return Integer.parseInt(url.substring(url.indexOf(":") + 1));
     }
+
+    @Override
+    public String toString() {
+        return "id: '%s', url: '%s'".formatted(id, url);
+    }
 }

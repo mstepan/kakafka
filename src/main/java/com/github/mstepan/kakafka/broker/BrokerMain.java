@@ -3,6 +3,7 @@ package com.github.mstepan.kakafka.broker;
 import com.github.mstepan.kakafka.broker.core.BrokerNameFactory;
 import com.github.mstepan.kakafka.broker.core.MetadataStorage;
 import com.github.mstepan.kakafka.broker.etcd.KeepAliveAndLeaderElectionTask;
+import com.github.mstepan.kakafka.broker.etcd.MetadataRetrieverTask;
 import com.github.mstepan.kakafka.broker.handlers.CreateTopicCommandServerHandler;
 import com.github.mstepan.kakafka.broker.handlers.ExitCommandServerHandler;
 import com.github.mstepan.kakafka.broker.handlers.GetMetadataCommandServerHandler;
@@ -38,7 +39,7 @@ public class BrokerMain {
         final BrokerConfig config =
                 new BrokerConfig(nameFac.generateBrokerName(), getPort(), "http://localhost:2379");
 
-        final MetadataStorage metadata = new MetadataStorage(config);
+        final MetadataStorage metadata = new MetadataStorage();
 
         new BrokerMain(config, metadata).run(getPort());
     }
@@ -64,9 +65,11 @@ public class BrokerMain {
 
     public void run(int port) throws Exception {
 
-        ExecutorService pool = Executors.newSingleThreadExecutor(new DaemonThreadFactory());
+        ExecutorService backgroundTasksPool =
+                Executors.newFixedThreadPool(2, new DaemonThreadFactory());
 
-        pool.execute(new KeepAliveAndLeaderElectionTask(config, metadata));
+        backgroundTasksPool.execute(new KeepAliveAndLeaderElectionTask(config, metadata));
+        backgroundTasksPool.execute(new MetadataRetrieverTask(config, metadata));
 
         // leak detector
         // https://netty.io/wiki/reference-counted-objects.html
@@ -119,7 +122,7 @@ public class BrokerMain {
         } finally {
             workerGroup.shutdownGracefully();
             bossGroup.shutdownGracefully();
-            pool.shutdownNow();
+            backgroundTasksPool.shutdownNow();
         }
     }
 }
