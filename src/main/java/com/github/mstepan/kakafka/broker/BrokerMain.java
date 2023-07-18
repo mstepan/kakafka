@@ -15,6 +15,7 @@ import io.etcd.jetcd.Client;
 import io.etcd.jetcd.Election;
 import io.etcd.jetcd.KV;
 import io.etcd.jetcd.Lease;
+import io.etcd.jetcd.Watch;
 import io.netty.bootstrap.ServerBootstrap;
 import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelInitializer;
@@ -46,12 +47,13 @@ public class BrokerMain {
         // jetcd 'Client' and all client classes, like `KV` are thread safe,
         // so we can use one instance per broker.
         try (Client client = Client.builder().endpoints(config.etcdEndpoint()).build();
-                Lease lease = client.getLeaseClient();
+                Lease leaseClient = client.getLeaseClient();
                 Election electionClient = client.getElectionClient();
-                KV kvClient = client.getKVClient()) {
+                KV kvClient = client.getKVClient();
+                Watch watchClient = client.getWatchClient()) {
 
             EtcdClientHolder etcdClientHolder =
-                    new EtcdClientHolder(lease, electionClient, kvClient);
+                    new EtcdClientHolder(leaseClient, electionClient, kvClient, watchClient);
 
             BrokerContext brokerContext = new BrokerContext(config, metadata, etcdClientHolder);
 

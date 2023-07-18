@@ -48,7 +48,7 @@ public class KeepAliveAndLeaderElectionTask implements Runnable {
     @Override
     public void run() {
         try {
-            final Lease lease = brokerCtx.etcdClientHolder().lease();
+            final Lease leaseClient = brokerCtx.etcdClientHolder().leaseClient();
             final KV kvClient = brokerCtx.etcdClientHolder().kvClient();
             final Election electionClient = brokerCtx.etcdClientHolder().electionClient();
 
@@ -58,7 +58,8 @@ public class KeepAliveAndLeaderElectionTask implements Runnable {
             final MetadataStorage metadata = brokerCtx.metadata();
 
             LeaseGrantResponse leaseResp =
-                    lease.grant(
+                    leaseClient
+                            .grant(
                                     LEASE_TTL_IN_SEC,
                                     LEASE_GRANT_OPERATION_TIMEOUT_IN_SEC,
                                     TimeUnit.SECONDS)
@@ -85,7 +86,7 @@ public class KeepAliveAndLeaderElectionTask implements Runnable {
             while (!Thread.currentThread().isInterrupted()) {
                 TimeUnit.SECONDS.sleep(THREAD_SLEEP_TIME_IN_SEC);
                 // https://github.com/etcd-io/jetcd/blob/main/jetcd-core/src/main/java/io/etcd/jetcd/Lease.java
-                lease.keepAliveOnce(leaseResp.getID()).get();
+                leaseClient.keepAliveOnce(leaseResp.getID()).get();
                 //                System.out.printf("[%s] lease keep alive%n", config.brokerName());
             }
         } catch (InterruptedException interEx) {

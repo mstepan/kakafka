@@ -24,4 +24,20 @@ public final class ThreadUtils {
             Thread.currentThread().interrupt();
         }
     }
+
+    public static void waitOn(Object mutex) {
+        synchronized (mutex) {
+            try {
+                mutex.wait();
+            } catch (InterruptedException interEx) {
+                Thread.currentThread().interrupt();
+            }
+        }
+    }
+
+    public static void notifyAllOn(Object mutex) {
+        synchronized (mutex) {
+            mutex.notifyAll();
+        }
+    }
 }

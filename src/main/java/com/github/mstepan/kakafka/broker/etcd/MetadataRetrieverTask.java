@@ -8,8 +8,12 @@ import com.github.mstepan.kakafka.broker.utils.ThreadUtils;
 import io.etcd.jetcd.ByteSequence;
 import io.etcd.jetcd.KV;
 import io.etcd.jetcd.KeyValue;
+import io.etcd.jetcd.Watch;
 import io.etcd.jetcd.kv.GetResponse;
 import io.etcd.jetcd.options.GetOption;
+import io.etcd.jetcd.options.WatchOption;
+import io.etcd.jetcd.watch.WatchEvent;
+import io.etcd.jetcd.watch.WatchResponse;
 import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.List;
@@ -20,24 +24,28 @@ public class MetadataRetrieverTask implements Runnable {
     private static final ByteSequence BROKER_KEY_PREFIX =
             EtcdUtils.toByteSeq(BrokerConfig.BROKER_KEY_PREFIX);
 
-    private static final long ETC_METADATA_POLL_INTERVAL_IN_SEC = 3L;
-
     private final BrokerContext brokerCtx;
 
     public MetadataRetrieverTask(BrokerContext brokerCtx) {
         this.brokerCtx = brokerCtx;
     }
 
+    // The 'MetadataRetrieverTask' thread will be blocked on 'mutex' until
+    // we detect changes in 'BROKER_KEY_PREFIX' path.
+    private final Object mutex = new Object();
+
     @Override
     public void run() {
-
         System.out.printf(
                 "[%s] Metadata retriever thread started", brokerCtx.config().brokerName());
 
-        while (!Thread.currentThread().isInterrupted()) {
-            fetchLiveBrokersFromEtcd();
+        fetchLiveBrokersFromEtcd();
 
-            ThreadUtils.sleepSec(ETC_METADATA_POLL_INTERVAL_IN_SEC);
+        watchForChanges();
+
+        while (!Thread.currentThread().isInterrupted()) {
+            ThreadUtils.waitOn(mutex);
+            fetchLiveBrokersFromEtcd();
         }
     }
 
@@ -49,9 +57,8 @@ public class MetadataRetrieverTask implements Runnable {
                     kvClient.get(BROKER_KEY_PREFIX, GetOption.newBuilder().isPrefix(true).build())
                             .get();
 
-            //                System.out.printf(
-            //                        "[%s] metadata state obtained from 'etcd' %n",
-            // config.brokerName());
+            System.out.printf(
+                    "[%s] metadata state obtained from 'etcd' %n", brokerCtx.config().brokerName());
 
             List<LiveBroker> liveBrokers = new ArrayList<>();
             for (KeyValue keyValue : getResp.getKvs()) {
@@ -71,5 +78,47 @@ public class MetadataRetrieverTask implements Runnable {
         } catch (InterruptedException | ExecutionException ex) {
             ex.printStackTrace();
         }
+    }
+
+    private void watchForChanges() {
+
+        Watch watchClient = brokerCtx.etcdClientHolder().watchClient();
+
+        watchClient.watch(
+                BROKER_KEY_PREFIX,
+                WatchOption.newBuilder().isPrefix(true).withRevision(0L).build(),
+                new Watch.Listener() {
+                    @Override
+                    public void onNext(WatchResponse watchResponse) {
+                        List<WatchEvent> events = watchResponse.getEvents();
+
+                        for (WatchEvent singleEvent : events) {
+                            if (singleEvent.getEventType() == WatchEvent.EventType.PUT) {
+                                System.out.printf(
+                                        "PUT %s => %s%n",
+                                        singleEvent.getKeyValue().getKey().toString(),
+                                        singleEvent.getKeyValue().getValue().toString());
+
+                            } else if (singleEvent.getEventType() == WatchEvent.EventType.DELETE) {
+                                System.out.printf(
+                                        "DELETE %s%n",
+                                        singleEvent.getKeyValue().getKey().toString());
+
+                            } else {
+                                System.out.println("UNRECOGNIZED event");
+                            }
+
+                            ThreadUtils.notifyAllOn(mutex);
+                        }
+                    }
+
+                    @Override
+                    public void onError(Throwable ex) {
+                        ex.printStackTrace();
+                    }
+
+                    @Override
+                    public void onCompleted() {}
+                });
     }
 }
