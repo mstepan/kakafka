@@ -88,10 +88,9 @@ public class SimpleBlockingClientMain {
 
             if (response instanceof MetadataCommandResponse metaCommandResp) {
 
-                if( metaCommandResp.statusCode() == 200 ){
+                if (metaCommandResp.statusCode() == 200) {
                     return metaCommandResp.state();
-                }
-                else {
+                } else {
                     throw new IllegalStateException("Get Metadata failed");
                 }
             } else {
