@@ -14,13 +14,8 @@ public record CreateTopicCommand(String topicName, int partitionsCount) implemen
     }
 
     @Override
-    public CommandMarker marker() {
-        return CommandMarker.CREATE_TOPIC;
-    }
-
-    @Override
     public void encode(DataOut out) {
-        out.writeInt(marker().value());
+        out.writeInt(CommandMarker.CREATE_TOPIC.value());
         out.writeString(topicName);
         out.writeInt(partitionsCount);
     }
