@@ -21,8 +21,8 @@ public record CreateTopicCommand(String topicName, int partitionsCount) implemen
     }
 
     public static CreateTopicCommand decode(DataIn in) {
-        int topicNameLength = in.readInt();
-        String topicName = in.readString(topicNameLength);
+        // read 'topicName' string
+        String topicName = in.readString();
         int partitionsCount = in.readInt();
 
         return new CreateTopicCommand(topicName, partitionsCount);

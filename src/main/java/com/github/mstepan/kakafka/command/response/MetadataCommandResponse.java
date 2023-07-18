@@ -41,10 +41,8 @@ public record MetadataCommandResponse(MetadataState state) implements CommandRes
 
         // CommandResponseDecoder.decode will decode | MARKER, int |
 
-        // read 'brokerName' length value
-        int brokerNameLength = in.readInt();
-
-        String brokerName = in.readString(brokerNameLength);
+        // read 'brokerName' string
+        String brokerName = in.readString();
 
         // read brokers count
         int brokersCount = in.readInt();
@@ -52,18 +50,11 @@ public record MetadataCommandResponse(MetadataState state) implements CommandRes
         List<LiveBroker> brokers = new ArrayList<>();
 
         for (int i = 0; i < brokersCount; ++i) {
+            // read 'brokerId' string
+            String brokerId = in.readString();
 
-            // read brokerId.length
-            int brokerIdLength = in.readInt();
-
-            // read 'brokerId' chars
-            String brokerId = in.readString(brokerIdLength);
-
-            // read 'broker.url' length
-            int brokerUrlLength = in.readInt();
-
-            // read 'broker.url' chars
-            String brokerUrl = in.readString(brokerUrlLength);
+            // read 'broker.url' string
+            String brokerUrl = in.readString();
 
             brokers.add(new LiveBroker(brokerId, brokerUrl));
         }

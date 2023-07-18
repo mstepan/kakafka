@@ -38,7 +38,14 @@ public class DataIn {
         }
     }
 
-    public String readString(int length) {
+    /**
+     * The string representation will have the following format: |<length>, int| <char sequence>,
+     * chars |
+     */
+    public String readString() {
+
+        final int length = readInt();
+
         if (nettyBuf != null) {
             return nettyBuf.readCharSequence(length, StandardCharsets.US_ASCII).toString();
         }
