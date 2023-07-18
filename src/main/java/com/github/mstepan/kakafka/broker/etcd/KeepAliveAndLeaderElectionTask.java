@@ -1,6 +1,7 @@
 package com.github.mstepan.kakafka.broker.etcd;
 
 import com.github.mstepan.kakafka.broker.BrokerConfig;
+import com.github.mstepan.kakafka.broker.BrokerContext;
 import com.github.mstepan.kakafka.broker.core.MetadataStorage;
 import com.github.mstepan.kakafka.broker.utils.EtcdUtils;
 import io.etcd.jetcd.ByteSequence;
@@ -38,25 +39,23 @@ public class KeepAliveAndLeaderElectionTask implements Runnable {
     /** Should be less than 'LEASE_TTL_IN_SEC' value */
     private static final long THREAD_SLEEP_TIME_IN_SEC = 1L;
 
-    private final BrokerConfig config;
+    private final BrokerContext brokerCtx;
 
-    private final MetadataStorage metadata;
-
-    private final EtcdClientHolder etcdClientHolder;
-
-    public KeepAliveAndLeaderElectionTask(
-            BrokerConfig config, MetadataStorage metadata, EtcdClientHolder etcdClientHolder) {
-        this.config = config;
-        this.metadata = metadata;
-        this.etcdClientHolder = etcdClientHolder;
+    public KeepAliveAndLeaderElectionTask(BrokerContext brokerCtx) {
+        this.brokerCtx = brokerCtx;
     }
 
     @Override
     public void run() {
         try {
-            final Lease lease = etcdClientHolder.lease();
-            final KV kvClient = etcdClientHolder.kvClient();
-            final Election electionClient = etcdClientHolder.electionClient();
+            final Lease lease = brokerCtx.etcdClientHolder().lease();
+            final KV kvClient = brokerCtx.etcdClientHolder().kvClient();
+            final Election electionClient = brokerCtx.etcdClientHolder().electionClient();
+
+            final String brokerName = brokerCtx.config().brokerName();
+
+            final BrokerConfig config = brokerCtx.config();
+            final MetadataStorage metadata = brokerCtx.metadata();
 
             LeaseGrantResponse leaseResp =
                     lease.grant(
@@ -65,24 +64,23 @@ public class KeepAliveAndLeaderElectionTask implements Runnable {
                                     TimeUnit.SECONDS)
                             .get();
 
-            System.out.printf("[%s] etcd LEASE granted%n", config.brokerName());
+            System.out.printf("[%s] etcd LEASE granted%n", brokerName);
 
             kvClient.put(
-                    EtcdUtils.toByteSeq(BROKER_KEY_PREFIX_TEMPLATE.formatted(config.brokerName())),
+                    EtcdUtils.toByteSeq(BROKER_KEY_PREFIX_TEMPLATE.formatted(brokerName)),
                     EtcdUtils.toByteSeq(config.url()),
                     PutOption.newBuilder().withLeaseId(leaseResp.getID()).build());
 
             System.out.printf(
                     "[%s] registering active broker at prefix '%s' %n",
-                    config.brokerName(), BROKER_KEY_PREFIX_TEMPLATE.formatted(config.brokerName()));
+                    config.brokerName(), BROKER_KEY_PREFIX_TEMPLATE.formatted(brokerName));
 
-            electionClient.observe(LEADER_KEY, new LeaderElectionListener(config, metadata));
+            electionClient.observe(LEADER_KEY, new LeaderElectionListener(brokerName, metadata));
 
             // https://github.com/etcd-io/jetcd/blob/main/jetcd-core/src/main/java/io/etcd/jetcd/Election.java
-            electionClient.campaign(
-                    LEADER_KEY, leaseResp.getID(), EtcdUtils.toByteSeq(config.brokerName()));
+            electionClient.campaign(LEADER_KEY, leaseResp.getID(), EtcdUtils.toByteSeq(brokerName));
 
-            System.out.printf("[%s] etcd LEADER ELECTION started%n", config.brokerName());
+            System.out.printf("[%s] etcd LEADER ELECTION started%n", brokerName);
 
             while (!Thread.currentThread().isInterrupted()) {
                 TimeUnit.SECONDS.sleep(THREAD_SLEEP_TIME_IN_SEC);
@@ -97,7 +95,7 @@ public class KeepAliveAndLeaderElectionTask implements Runnable {
         }
     }
 
-    private record LeaderElectionListener(BrokerConfig config, MetadataStorage metadata)
+    private record LeaderElectionListener(String brokerName, MetadataStorage metadata)
             implements Election.Listener {
 
         @Override
@@ -111,7 +109,7 @@ public class KeepAliveAndLeaderElectionTask implements Runnable {
             */
             System.out.printf(
                     "[%s] Leader selected, key = '%s', value = '%s' %n",
-                    config.brokerName(), leaderKeyAndValue.getKey(), leaderKeyAndValue.getValue());
+                    brokerName, leaderKeyAndValue.getKey(), leaderKeyAndValue.getValue());
 
             final String leaderName =
                     leaderKeyAndValue.getValue().toString(StandardCharsets.US_ASCII);
@@ -125,7 +123,7 @@ public class KeepAliveAndLeaderElectionTask implements Runnable {
 
         @Override
         public void onCompleted() {
-            System.out.printf("[%s] Election done%n", config.brokerName());
+            System.out.printf("[%s] Election done%n", brokerName);
         }
     }
 }

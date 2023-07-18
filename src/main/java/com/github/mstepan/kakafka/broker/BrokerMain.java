@@ -30,17 +30,10 @@ import java.util.concurrent.ThreadLocalRandom;
 
 public class BrokerMain {
 
-    private final BrokerConfig config;
+    private final BrokerContext brokerCtx;
 
-    private final MetadataStorage metadata;
-
-    private final EtcdClientHolder etcdClientHolder;
-
-    public BrokerMain(
-            BrokerConfig config, MetadataStorage metadata, EtcdClientHolder etcdClientHolder) {
-        this.config = config;
-        this.metadata = metadata;
-        this.etcdClientHolder = etcdClientHolder;
+    public BrokerMain(BrokerContext brokerCtx) {
+        this.brokerCtx = brokerCtx;
     }
 
     public static void main(String[] args) throws Exception {
@@ -60,7 +53,9 @@ public class BrokerMain {
             EtcdClientHolder etcdClientHolder =
                     new EtcdClientHolder(lease, electionClient, kvClient);
 
-            new BrokerMain(config, metadata, etcdClientHolder).run(getPort());
+            BrokerContext brokerContext = new BrokerContext(config, metadata, etcdClientHolder);
+
+            new BrokerMain(brokerContext).run(getPort());
         }
     }
 
@@ -88,9 +83,8 @@ public class BrokerMain {
         ExecutorService backgroundTasksPool =
                 Executors.newFixedThreadPool(2, new DaemonThreadFactory());
 
-        backgroundTasksPool.execute(
-                new KeepAliveAndLeaderElectionTask(config, metadata, etcdClientHolder));
-        backgroundTasksPool.execute(new MetadataRetrieverTask(config, metadata, etcdClientHolder));
+        backgroundTasksPool.execute(new KeepAliveAndLeaderElectionTask(brokerCtx));
+        backgroundTasksPool.execute(new MetadataRetrieverTask(brokerCtx));
 
         // leak detector
         // https://netty.io/wiki/reference-counted-objects.html
@@ -115,11 +109,12 @@ public class BrokerMain {
                                                     new CommandDecoder(),
                                                     new CommandResponseEncoder(),
                                                     new ExitCommandServerHandler(
-                                                            config.brokerName()),
+                                                            brokerCtx.config().brokerName()),
                                                     new GetMetadataCommandServerHandler(
-                                                            config.brokerName(), metadata),
+                                                            brokerCtx.config().brokerName(),
+                                                            brokerCtx.metadata()),
                                                     new CreateTopicCommandServerHandler(
-                                                            config.brokerName()));
+                                                            brokerCtx.config().brokerName()));
                                 }
                             })
                     // The number of connections to be queued.
@@ -130,7 +125,9 @@ public class BrokerMain {
                     // and the connection is dropped if 3 sequential ACKs are missed.
                     .childOption(ChannelOption.SO_KEEPALIVE, true);
 
-            System.out.printf("[%s] started at '%s:%d'%n", config.brokerName(), "localhost", port);
+            System.out.printf(
+                    "[%s] started at '%s:%d'%n",
+                    brokerCtx.config().brokerName(), "localhost", port);
 
             // Bind and start to accept incoming connections.
             // Bind to the port of all NICs (network interface cards) in the machine.

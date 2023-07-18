@@ -1,8 +1,8 @@
 package com.github.mstepan.kakafka.broker.etcd;
 
 import com.github.mstepan.kakafka.broker.BrokerConfig;
+import com.github.mstepan.kakafka.broker.BrokerContext;
 import com.github.mstepan.kakafka.broker.core.LiveBroker;
-import com.github.mstepan.kakafka.broker.core.MetadataStorage;
 import com.github.mstepan.kakafka.broker.utils.EtcdUtils;
 import com.github.mstepan.kakafka.broker.utils.ThreadUtils;
 import io.etcd.jetcd.ByteSequence;
@@ -22,27 +22,21 @@ public class MetadataRetrieverTask implements Runnable {
 
     private static final long ETC_METADATA_POLL_INTERVAL_IN_SEC = 3L;
 
-    private final BrokerConfig config;
+    private final BrokerContext brokerCtx;
 
-    private final MetadataStorage metaStorage;
-
-    private final EtcdClientHolder etcdClientHolder;
-
-    public MetadataRetrieverTask(
-            BrokerConfig config, MetadataStorage metaStorage, EtcdClientHolder etcdClientHolder) {
-        this.config = config;
-        this.metaStorage = metaStorage;
-        this.etcdClientHolder = etcdClientHolder;
+    public MetadataRetrieverTask(BrokerContext brokerCtx) {
+        this.brokerCtx = brokerCtx;
     }
 
     @Override
     public void run() {
 
-        System.out.printf("[%s] Metadata retriever thread started", config.brokerName());
+        System.out.printf(
+                "[%s] Metadata retriever thread started", brokerCtx.config().brokerName());
 
         while (!Thread.currentThread().isInterrupted()) {
             try {
-                final KV kvClient = etcdClientHolder.kvClient();
+                final KV kvClient = brokerCtx.etcdClientHolder().kvClient();
 
                 GetResponse getResp =
                         kvClient.get(
@@ -69,7 +63,7 @@ public class MetadataRetrieverTask implements Runnable {
                     liveBrokers.add(new LiveBroker(brokerName, brokerUrl));
                 }
 
-                metaStorage.setLiveBrokers(liveBrokers);
+                brokerCtx.metadata().setLiveBrokers(liveBrokers);
 
             } catch (InterruptedException | ExecutionException ex) {
                 ex.printStackTrace();
