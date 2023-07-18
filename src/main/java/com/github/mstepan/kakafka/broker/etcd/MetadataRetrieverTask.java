@@ -5,6 +5,7 @@ import com.github.mstepan.kakafka.broker.core.LiveBroker;
 import com.github.mstepan.kakafka.broker.core.MetadataStorage;
 import com.github.mstepan.kakafka.broker.utils.EtcdUtils;
 import com.github.mstepan.kakafka.broker.utils.ThreadUtils;
+import io.etcd.jetcd.ByteSequence;
 import io.etcd.jetcd.Client;
 import io.etcd.jetcd.KV;
 import io.etcd.jetcd.KeyValue;
@@ -16,6 +17,9 @@ import java.util.List;
 import java.util.concurrent.ExecutionException;
 
 public class MetadataRetrieverTask implements Runnable {
+
+    private static final ByteSequence BROKER_KEY_PREFIX =
+            EtcdUtils.toByteSeq(BrokerConfig.BROKER_KEY_PREFIX);
 
     private static final long ETC_METADATA_POLL_INTERVAL_IN_SEC = 5L;
 
@@ -40,7 +44,7 @@ public class MetadataRetrieverTask implements Runnable {
                 try {
                     GetResponse getResp =
                             kvClient.get(
-                                            EtcdUtils.toByteSeq(BrokerConfig.BROKER_KEY_PREFIX),
+                                            BROKER_KEY_PREFIX,
                                             GetOption.newBuilder().isPrefix(true).build())
                                     .get();
 
@@ -51,6 +55,8 @@ public class MetadataRetrieverTask implements Runnable {
                     List<LiveBroker> liveBrokers = new ArrayList<>();
                     for (KeyValue keyValue : getResp.getKvs()) {
 
+                        // 'brokerIdPath' example
+                        // '/kakafka/brokers/broker-3b93e71d-df46-4a4a-98ac-41a1eaf9216c'
                         String brokerIdPath = keyValue.getKey().toString(StandardCharsets.US_ASCII);
 
                         final String brokerName =

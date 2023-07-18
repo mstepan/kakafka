@@ -14,6 +14,8 @@ import java.io.DataInputStream;
 import java.io.DataOutputStream;
 import java.io.IOException;
 import java.net.Socket;
+import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
 
 public class SimpleBlockingClientMain {
@@ -25,10 +27,16 @@ public class SimpleBlockingClientMain {
             List.of(
                     new BrokerHost("localhost", 9091),
                     new BrokerHost("localhost", 9092),
-                    new BrokerHost("localhost", 9093));
+                    new BrokerHost("localhost", 9093),
+                    new BrokerHost("localhost", 9094),
+                    new BrokerHost("localhost", 9095)
+            );
 
     public static void main(String[] args) throws Exception {
-        new SimpleBlockingClientMain().run();
+
+//        for(int i = 0; i < 1000; ++i){
+            new SimpleBlockingClientMain().run();
+//        }
     }
 
     public void run() throws IOException {
@@ -100,11 +108,15 @@ public class SimpleBlockingClientMain {
     }
 
     private Socket findAvailableBroker() {
-        for (BrokerHost curBrokerHost : seedBrokers) {
+        List<BrokerHost> randomOrderedSeedBrokers = new ArrayList<>(seedBrokers);
+        Collections.shuffle(randomOrderedSeedBrokers);
+
+        for (BrokerHost curBrokerHost : randomOrderedSeedBrokers) {
 
             Socket socket = connect(curBrokerHost);
 
             if (socket != null) {
+                System.out.printf("Initial connection established to '%s:%d'%n", curBrokerHost.host(), curBrokerHost.port());
                 return socket;
             }
         }
