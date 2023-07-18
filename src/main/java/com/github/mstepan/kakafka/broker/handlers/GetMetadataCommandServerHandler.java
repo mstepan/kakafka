@@ -57,10 +57,7 @@ public class GetMetadataCommandServerHandler extends ChannelInboundHandlerAdapte
                     System.out.printf(
                             "[%s] getting metadata state from 'etcd' FAILED %n", brokerName);
                     ex.printStackTrace();
-
-                    // TODO: write failed response here
-                    // ctx.writeAndFlush(new MetadataCommandResponse(null));
-
+                    ctx.writeAndFlush(new MetadataCommandResponse(null, 500));
                     return;
                 }
 
@@ -82,7 +79,7 @@ public class GetMetadataCommandServerHandler extends ChannelInboundHandlerAdapte
                 MetadataState state =
                         new MetadataState(metadata.getLeaderBrokerName(), liveBrokers);
 
-                ctx.writeAndFlush(new MetadataCommandResponse(state));
+                ctx.writeAndFlush(new MetadataCommandResponse(state, 200));
             } finally {
                 ReferenceCountUtil.release(msg);
             }

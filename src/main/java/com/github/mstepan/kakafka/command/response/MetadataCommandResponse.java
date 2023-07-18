@@ -8,13 +8,17 @@ import com.github.mstepan.kakafka.io.DataOut;
 import java.util.ArrayList;
 import java.util.List;
 
-public record MetadataCommandResponse(MetadataState state) implements CommandResponse {
+public record MetadataCommandResponse(MetadataState state, int statusCode)
+        implements CommandResponse {
 
     @Override
     public void encode(DataOut out) {
 
         // | MARKER, int |
         out.writeInt(CommandMarker.GET_METADATA.value());
+
+        // | status code, int |
+        out.writeInt(statusCode);
 
         //
         // | <leader broker name length>, int | <leader broker name chars>
@@ -38,8 +42,11 @@ public record MetadataCommandResponse(MetadataState state) implements CommandRes
     }
 
     public static MetadataCommandResponse decode(DataIn in) {
+        //  | MARKER, int |
+        //  will be decoded inside CommandResponseDecoder.decoded
 
-        // CommandResponseDecoder.decode will decode | MARKER, int |
+        // | status code, int |
+        int statusCode = in.readInt();
 
         // read 'brokerName' string
         String brokerName = in.readString();
@@ -58,6 +65,6 @@ public record MetadataCommandResponse(MetadataState state) implements CommandRes
 
             brokers.add(new LiveBroker(brokerId, brokerUrl));
         }
-        return new MetadataCommandResponse(new MetadataState(brokerName, brokers));
+        return new MetadataCommandResponse(new MetadataState(brokerName, brokers), statusCode);
     }
 }

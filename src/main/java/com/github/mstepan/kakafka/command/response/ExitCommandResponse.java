@@ -13,6 +13,9 @@ public record ExitCommandResponse() implements CommandResponse {
     }
 
     public static ExitCommandResponse decode(DataIn in) {
+        //  | MARKER, int |
+        //  will be decoded inside CommandResponseDecoder.decoded
+
         return new ExitCommandResponse();
     }
 }

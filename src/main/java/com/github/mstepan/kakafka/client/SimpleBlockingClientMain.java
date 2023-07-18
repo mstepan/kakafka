@@ -87,7 +87,13 @@ public class SimpleBlockingClientMain {
             CommandResponse response = CommandResponseDecoder.decode(in);
 
             if (response instanceof MetadataCommandResponse metaCommandResp) {
-                return metaCommandResp.state();
+
+                if( metaCommandResp.statusCode() == 200 ){
+                    return metaCommandResp.state();
+                }
+                else {
+                    throw new IllegalStateException("Get Metadata failed");
+                }
             } else {
                 throw new IllegalStateException("Can't obtain metadata from broker.");
             }

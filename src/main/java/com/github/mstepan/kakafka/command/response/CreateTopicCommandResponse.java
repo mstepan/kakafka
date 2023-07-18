@@ -13,6 +13,9 @@ public record CreateTopicCommandResponse() implements CommandResponse {
     }
 
     public static CreateTopicCommandResponse decode(DataIn in) {
+        //  | MARKER, int |
+        //  will be decoded inside CommandResponseDecoder.decoded
+
         return new CreateTopicCommandResponse();
     }
 }
