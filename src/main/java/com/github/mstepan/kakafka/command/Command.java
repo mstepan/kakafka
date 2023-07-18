@@ -7,7 +7,7 @@ public interface Command {
 
     CommandMarker marker();
 
-    default void encode(DataOut out) {}
+    void encode(DataOut out);
 
     static Command decode(DataIn in, int typeMarker) {
 

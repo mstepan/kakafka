@@ -12,7 +12,7 @@ public final class CommandResponseEncoder extends MessageToByteEncoder<CommandRe
             DataOut out = DataOut.fromNettyByteBuf(buf);
             msg.encode(out);
         } catch (Exception ex) {
-            ex.printStackTrace();
+            throw new IllegalStateException(" CommandResponse 'encode' failed", ex);
         }
     }
 }

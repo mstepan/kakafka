@@ -16,13 +16,17 @@ public final class CommandResponseDecoder extends ReplayingDecoder<Void> {
     }
 
     public static CommandResponse decode(DataIn in) {
-        // read marker 'int' value
-        int marker = in.readInt();
+        try {
+            // read marker 'int' value
+            int marker = in.readInt();
 
-        if (marker == CommandMarker.GET_METADATA.value()) {
-            return MetadataCommandResponse.decode(in);
-        } else {
-            throw new IllegalStateException("Unknown marker type detected: " + marker);
+            if (marker == CommandMarker.GET_METADATA.value()) {
+                return MetadataCommandResponse.decode(in);
+            } else {
+                throw new IllegalStateException("Unknown marker type detected: " + marker);
+            }
+        } catch (Exception ex) {
+            throw new IllegalStateException("CommandResponse 'decode' failed", ex);
         }
     }
 }

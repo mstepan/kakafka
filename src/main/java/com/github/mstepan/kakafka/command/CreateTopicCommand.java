@@ -34,8 +34,7 @@ public class CreateTopicCommand implements Command {
 
     @Override
     public void encode(DataOut out) {
-        // do not write marker int value here, b/c it will be automatically populated by
-        // 'CommandEncoder.encode'
+        out.writeInt(marker().value());
         out.writeString(topicName);
         out.writeInt(partitionsCount);
     }
