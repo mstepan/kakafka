@@ -85,6 +85,7 @@ public class KeepAliveAndLeaderElectionTask implements Runnable {
                 TimeUnit.SECONDS.sleep(THREAD_SLEEP_TIME_IN_SEC);
                 // https://github.com/etcd-io/jetcd/blob/main/jetcd-core/src/main/java/io/etcd/jetcd/Lease.java
                 lease.keepAliveOnce(leaseResp.getID()).get();
+                //                System.out.printf("[%s] lease keep alive%n", config.brokerName());
             }
         } catch (InterruptedException interEx) {
             Thread.currentThread().interrupt();
@@ -112,9 +113,6 @@ public class KeepAliveAndLeaderElectionTask implements Runnable {
             final String leaderName =
                     leaderKeyAndValue.getValue().toString(StandardCharsets.US_ASCII);
             metadata.setLeader(leaderName);
-
-            System.out.printf(
-                    "[%s] MetadataStorage leader set to '%s'%n", config.brokerName(), leaderName);
         }
 
         @Override
