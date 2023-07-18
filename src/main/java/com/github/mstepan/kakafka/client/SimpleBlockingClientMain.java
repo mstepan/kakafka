@@ -59,6 +59,8 @@ public class SimpleBlockingClientMain {
                 try (DataInputStream dataIn = new DataInputStream(leader.getInputStream());
                         DataOutputStream dataOut = new DataOutputStream(leader.getOutputStream())) {
                     sendCommand(new CreateTopicCommand("topic-a", 3), dataOut);
+                    CommandResponse response =
+                            CommandResponseDecoder.decode(DataIn.fromStandardStream(dataIn));
                 }
 
             } finally {

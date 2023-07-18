@@ -18,13 +18,16 @@ public final class CommandResponseDecoder extends ReplayingDecoder<Void> {
     public static CommandResponse decode(DataIn in) {
         try {
             // read marker 'int' value
-            int marker = in.readInt();
+            int typeMarker = in.readInt();
 
-            if (marker == CommandMarker.GET_METADATA.value()) {
-                return MetadataCommandResponse.decode(in);
-            } else {
-                throw new IllegalStateException("Unknown marker type detected: " + marker);
-            }
+            CommandMarker marker = CommandMarker.fromIntValue(typeMarker);
+
+            return switch (marker) {
+                case GET_METADATA -> MetadataCommandResponse.decode(in);
+                case EXIT -> ExitCommandResponse.decode(in);
+                case CREATE_TOPIC -> CreateTopicCommandResponse.decode(in);
+            };
+
         } catch (Exception ex) {
             throw new IllegalStateException("CommandResponse 'decode' failed", ex);
         }

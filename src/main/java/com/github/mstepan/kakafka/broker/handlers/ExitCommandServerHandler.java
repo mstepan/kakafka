@@ -2,6 +2,7 @@ package com.github.mstepan.kakafka.broker.handlers;
 
 import com.github.mstepan.kakafka.command.Command;
 import com.github.mstepan.kakafka.command.ExitCommand;
+import com.github.mstepan.kakafka.command.response.ExitCommandResponse;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelInboundHandlerAdapter;
 import io.netty.util.ReferenceCountUtil;
@@ -21,6 +22,7 @@ public class ExitCommandServerHandler extends ChannelInboundHandlerAdapter {
         if (command instanceof ExitCommand) {
             try {
                 System.out.printf("[%s] 'exit' command received %n", brokerName);
+                ctx.writeAndFlush(new ExitCommandResponse());
                 ctx.close();
             } finally {
                 ReferenceCountUtil.release(msg);
