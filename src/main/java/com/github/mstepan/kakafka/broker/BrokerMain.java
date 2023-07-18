@@ -2,6 +2,7 @@ package com.github.mstepan.kakafka.broker;
 
 import com.github.mstepan.kakafka.broker.core.BrokerNameFactory;
 import com.github.mstepan.kakafka.broker.core.MetadataStorage;
+import com.github.mstepan.kakafka.broker.etcd.EtcdClientHolder;
 import com.github.mstepan.kakafka.broker.etcd.KeepAliveAndLeaderElectionTask;
 import com.github.mstepan.kakafka.broker.etcd.MetadataRetrieverTask;
 import com.github.mstepan.kakafka.broker.handlers.CreateTopicCommandServerHandler;
@@ -10,6 +11,10 @@ import com.github.mstepan.kakafka.broker.handlers.GetMetadataCommandServerHandle
 import com.github.mstepan.kakafka.broker.utils.DaemonThreadFactory;
 import com.github.mstepan.kakafka.command.CommandDecoder;
 import com.github.mstepan.kakafka.command.response.CommandResponseEncoder;
+import io.etcd.jetcd.Client;
+import io.etcd.jetcd.Election;
+import io.etcd.jetcd.KV;
+import io.etcd.jetcd.Lease;
 import io.netty.bootstrap.ServerBootstrap;
 import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelInitializer;
@@ -29,9 +34,13 @@ public class BrokerMain {
 
     private final MetadataStorage metadata;
 
-    public BrokerMain(BrokerConfig config, MetadataStorage metadata) {
+    private final EtcdClientHolder etcdClientHolder;
+
+    public BrokerMain(
+            BrokerConfig config, MetadataStorage metadata, EtcdClientHolder etcdClientHolder) {
         this.config = config;
         this.metadata = metadata;
+        this.etcdClientHolder = etcdClientHolder;
     }
 
     public static void main(String[] args) throws Exception {
@@ -41,7 +50,18 @@ public class BrokerMain {
 
         final MetadataStorage metadata = new MetadataStorage();
 
-        new BrokerMain(config, metadata).run(getPort());
+        // jetcd 'Client' and all client classes, like `KV` are thread safe,
+        // so we can use one instance per broker.
+        try (Client client = Client.builder().endpoints(config.etcdEndpoint()).build();
+                Lease lease = client.getLeaseClient();
+                Election electionClient = client.getElectionClient();
+                KV kvClient = client.getKVClient()) {
+
+            EtcdClientHolder etcdClientHolder =
+                    new EtcdClientHolder(lease, electionClient, kvClient);
+
+            new BrokerMain(config, metadata, etcdClientHolder).run(getPort());
+        }
     }
 
     private static int getPort() {
@@ -68,8 +88,9 @@ public class BrokerMain {
         ExecutorService backgroundTasksPool =
                 Executors.newFixedThreadPool(2, new DaemonThreadFactory());
 
-        backgroundTasksPool.execute(new KeepAliveAndLeaderElectionTask(config, metadata));
-        backgroundTasksPool.execute(new MetadataRetrieverTask(config, metadata));
+        backgroundTasksPool.execute(
+                new KeepAliveAndLeaderElectionTask(config, metadata, etcdClientHolder));
+        backgroundTasksPool.execute(new MetadataRetrieverTask(config, metadata, etcdClientHolder));
 
         // leak detector
         // https://netty.io/wiki/reference-counted-objects.html

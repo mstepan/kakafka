@@ -4,7 +4,6 @@ import com.github.mstepan.kakafka.broker.BrokerConfig;
 import com.github.mstepan.kakafka.broker.core.MetadataStorage;
 import com.github.mstepan.kakafka.broker.utils.EtcdUtils;
 import io.etcd.jetcd.ByteSequence;
-import io.etcd.jetcd.Client;
 import io.etcd.jetcd.Election;
 import io.etcd.jetcd.KV;
 import io.etcd.jetcd.KeyValue;
@@ -43,17 +42,21 @@ public class KeepAliveAndLeaderElectionTask implements Runnable {
 
     private final MetadataStorage metadata;
 
-    public KeepAliveAndLeaderElectionTask(BrokerConfig config, MetadataStorage metadata) {
+    private final EtcdClientHolder etcdClientHolder;
+
+    public KeepAliveAndLeaderElectionTask(
+            BrokerConfig config, MetadataStorage metadata, EtcdClientHolder etcdClientHolder) {
         this.config = config;
         this.metadata = metadata;
+        this.etcdClientHolder = etcdClientHolder;
     }
 
     @Override
     public void run() {
-        try (Client client = Client.builder().endpoints(config.etcdEndpoint()).build();
-                Lease lease = client.getLeaseClient();
-                KV kvClient = client.getKVClient();
-                Election electionClient = client.getElectionClient()) {
+        try {
+            final Lease lease = etcdClientHolder.lease();
+            final KV kvClient = etcdClientHolder.kvClient();
+            final Election electionClient = etcdClientHolder.electionClient();
 
             LeaseGrantResponse leaseResp =
                     lease.grant(

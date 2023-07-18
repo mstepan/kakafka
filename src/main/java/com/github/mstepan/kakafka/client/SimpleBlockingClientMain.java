@@ -23,18 +23,17 @@ public class SimpleBlockingClientMain {
     private static final int NO_AVAILABLE_BROKERS_EXIT_CODE = 3;
     private static final int CANT_CONNECT_TO_LEADER_EXIT_CODE = 4;
 
+    // provide list of seed broker to connect to
     private static final List<BrokerHost> seedBrokers =
             List.of(
                     new BrokerHost("localhost", 9091),
                     new BrokerHost("localhost", 9092),
                     new BrokerHost("localhost", 9093),
                     new BrokerHost("localhost", 9094),
-                    new BrokerHost("localhost", 9095)
-            );
+                    new BrokerHost("localhost", 9095));
 
     public static void main(String[] args) throws Exception {
-
-//        for(int i = 0; i < 1000; ++i){
+//        for (int i = 0; i < 100; ++i) {
             new SimpleBlockingClientMain().run();
 //        }
     }
@@ -116,7 +115,9 @@ public class SimpleBlockingClientMain {
             Socket socket = connect(curBrokerHost);
 
             if (socket != null) {
-                System.out.printf("Initial connection established to '%s:%d'%n", curBrokerHost.host(), curBrokerHost.port());
+                System.out.printf(
+                        "Initial connection established to '%s:%d'%n",
+                        curBrokerHost.host(), curBrokerHost.port());
                 return socket;
             }
         }

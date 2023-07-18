@@ -6,7 +6,6 @@ import com.github.mstepan.kakafka.broker.core.MetadataStorage;
 import com.github.mstepan.kakafka.broker.utils.EtcdUtils;
 import com.github.mstepan.kakafka.broker.utils.ThreadUtils;
 import io.etcd.jetcd.ByteSequence;
-import io.etcd.jetcd.Client;
 import io.etcd.jetcd.KV;
 import io.etcd.jetcd.KeyValue;
 import io.etcd.jetcd.kv.GetResponse;
@@ -21,15 +20,19 @@ public class MetadataRetrieverTask implements Runnable {
     private static final ByteSequence BROKER_KEY_PREFIX =
             EtcdUtils.toByteSeq(BrokerConfig.BROKER_KEY_PREFIX);
 
-    private static final long ETC_METADATA_POLL_INTERVAL_IN_SEC = 5L;
+    private static final long ETC_METADATA_POLL_INTERVAL_IN_SEC = 3L;
 
     private final BrokerConfig config;
 
     private final MetadataStorage metaStorage;
 
-    public MetadataRetrieverTask(BrokerConfig config, MetadataStorage metaStorage) {
+    private final EtcdClientHolder etcdClientHolder;
+
+    public MetadataRetrieverTask(
+            BrokerConfig config, MetadataStorage metaStorage, EtcdClientHolder etcdClientHolder) {
         this.config = config;
         this.metaStorage = metaStorage;
+        this.etcdClientHolder = etcdClientHolder;
     }
 
     @Override
@@ -38,40 +41,38 @@ public class MetadataRetrieverTask implements Runnable {
         System.out.printf("[%s] Metadata retriever thread started", config.brokerName());
 
         while (!Thread.currentThread().isInterrupted()) {
+            try {
+                final KV kvClient = etcdClientHolder.kvClient();
 
-            try (Client client = Client.builder().endpoints(config.etcdEndpoint()).build();
-                    KV kvClient = client.getKVClient()) {
-                try {
-                    GetResponse getResp =
-                            kvClient.get(
-                                            BROKER_KEY_PREFIX,
-                                            GetOption.newBuilder().isPrefix(true).build())
-                                    .get();
+                GetResponse getResp =
+                        kvClient.get(
+                                        BROKER_KEY_PREFIX,
+                                        GetOption.newBuilder().isPrefix(true).build())
+                                .get();
 
-                    //                    System.out.printf(
-                    //                            "[%s] metadata state obtained from 'etcd' %n",
-                    // config.brokerName());
+                //                System.out.printf(
+                //                        "[%s] metadata state obtained from 'etcd' %n",
+                // config.brokerName());
 
-                    List<LiveBroker> liveBrokers = new ArrayList<>();
-                    for (KeyValue keyValue : getResp.getKvs()) {
+                List<LiveBroker> liveBrokers = new ArrayList<>();
+                for (KeyValue keyValue : getResp.getKvs()) {
 
-                        // 'brokerIdPath' example
-                        // '/kakafka/brokers/broker-3b93e71d-df46-4a4a-98ac-41a1eaf9216c'
-                        String brokerIdPath = keyValue.getKey().toString(StandardCharsets.US_ASCII);
+                    // 'brokerIdPath' example
+                    // '/kakafka/brokers/broker-3b93e71d-df46-4a4a-98ac-41a1eaf9216c'
+                    String brokerIdPath = keyValue.getKey().toString(StandardCharsets.US_ASCII);
 
-                        final String brokerName =
-                                brokerIdPath.substring(brokerIdPath.lastIndexOf("/") + 1);
-                        final String brokerUrl =
-                                keyValue.getValue().toString(StandardCharsets.US_ASCII);
+                    final String brokerName =
+                            brokerIdPath.substring(brokerIdPath.lastIndexOf("/") + 1);
+                    final String brokerUrl =
+                            keyValue.getValue().toString(StandardCharsets.US_ASCII);
 
-                        liveBrokers.add(new LiveBroker(brokerName, brokerUrl));
-                    }
-
-                    metaStorage.setLiveBrokers(liveBrokers);
-
-                } catch (InterruptedException | ExecutionException ex) {
-                    ex.printStackTrace();
+                    liveBrokers.add(new LiveBroker(brokerName, brokerUrl));
                 }
+
+                metaStorage.setLiveBrokers(liveBrokers);
+
+            } catch (InterruptedException | ExecutionException ex) {
+                ex.printStackTrace();
             }
 
             ThreadUtils.sleepSec(ETC_METADATA_POLL_INTERVAL_IN_SEC);
