@@ -35,41 +35,41 @@ public class MetadataRetrieverTask implements Runnable {
                 "[%s] Metadata retriever thread started", brokerCtx.config().brokerName());
 
         while (!Thread.currentThread().isInterrupted()) {
-            try {
-                final KV kvClient = brokerCtx.etcdClientHolder().kvClient();
-
-                GetResponse getResp =
-                        kvClient.get(
-                                        BROKER_KEY_PREFIX,
-                                        GetOption.newBuilder().isPrefix(true).build())
-                                .get();
-
-                //                System.out.printf(
-                //                        "[%s] metadata state obtained from 'etcd' %n",
-                // config.brokerName());
-
-                List<LiveBroker> liveBrokers = new ArrayList<>();
-                for (KeyValue keyValue : getResp.getKvs()) {
-
-                    // 'brokerIdPath' example
-                    // '/kakafka/brokers/broker-3b93e71d-df46-4a4a-98ac-41a1eaf9216c'
-                    String brokerIdPath = keyValue.getKey().toString(StandardCharsets.US_ASCII);
-
-                    final String brokerName =
-                            brokerIdPath.substring(brokerIdPath.lastIndexOf("/") + 1);
-                    final String brokerUrl =
-                            keyValue.getValue().toString(StandardCharsets.US_ASCII);
-
-                    liveBrokers.add(new LiveBroker(brokerName, brokerUrl));
-                }
-
-                brokerCtx.metadata().setLiveBrokers(liveBrokers);
-
-            } catch (InterruptedException | ExecutionException ex) {
-                ex.printStackTrace();
-            }
+            fetchLiveBrokersFromEtcd();
 
             ThreadUtils.sleepSec(ETC_METADATA_POLL_INTERVAL_IN_SEC);
+        }
+    }
+
+    private void fetchLiveBrokersFromEtcd() {
+        try {
+            final KV kvClient = brokerCtx.etcdClientHolder().kvClient();
+
+            GetResponse getResp =
+                    kvClient.get(BROKER_KEY_PREFIX, GetOption.newBuilder().isPrefix(true).build())
+                            .get();
+
+            //                System.out.printf(
+            //                        "[%s] metadata state obtained from 'etcd' %n",
+            // config.brokerName());
+
+            List<LiveBroker> liveBrokers = new ArrayList<>();
+            for (KeyValue keyValue : getResp.getKvs()) {
+
+                // 'brokerIdPath' example
+                // '/kakafka/brokers/broker-3b93e71d-df46-4a4a-98ac-41a1eaf9216c'
+                String brokerIdPath = keyValue.getKey().toString(StandardCharsets.US_ASCII);
+
+                final String brokerName = brokerIdPath.substring(brokerIdPath.lastIndexOf("/") + 1);
+                final String brokerUrl = keyValue.getValue().toString(StandardCharsets.US_ASCII);
+
+                liveBrokers.add(new LiveBroker(brokerName, brokerUrl));
+            }
+
+            brokerCtx.metadata().setLiveBrokers(liveBrokers);
+
+        } catch (InterruptedException | ExecutionException ex) {
+            ex.printStackTrace();
         }
     }
 }
