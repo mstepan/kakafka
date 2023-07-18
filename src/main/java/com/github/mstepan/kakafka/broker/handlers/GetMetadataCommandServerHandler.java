@@ -34,7 +34,6 @@ public class GetMetadataCommandServerHandler extends ChannelInboundHandlerAdapte
 
         if (command instanceof GetMetadataCommand) {
             System.out.printf("[%s] 'get_metadata' command received %n", brokerName);
-
             metadata.getMetadataState().whenComplete(new MetadataListener(ctx, msg));
         } else {
             ctx.fireChannelRead(msg);
