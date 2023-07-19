@@ -1,12 +1,15 @@
 package com.github.mstepan.kakafka.client;
 
 import com.github.mstepan.kakafka.broker.core.MetadataState;
+import com.github.mstepan.kakafka.broker.core.topic.TopicInfo;
+import com.github.mstepan.kakafka.broker.core.topic.TopicPartitionInfo;
 import com.github.mstepan.kakafka.command.Command;
 import com.github.mstepan.kakafka.command.CommandEncoder;
 import com.github.mstepan.kakafka.command.CreateTopicCommand;
 import com.github.mstepan.kakafka.command.GetMetadataCommand;
 import com.github.mstepan.kakafka.command.response.CommandResponse;
 import com.github.mstepan.kakafka.command.response.CommandResponseDecoder;
+import com.github.mstepan.kakafka.command.response.CreateTopicCommandResponse;
 import com.github.mstepan.kakafka.command.response.MetadataCommandResponse;
 import com.github.mstepan.kakafka.io.DataIn;
 import com.github.mstepan.kakafka.io.DataOut;
@@ -33,9 +36,9 @@ public final class SimpleBlockingClientMain {
                     new BrokerHost("localhost", 9095));
 
     public static void main(String[] args) throws Exception {
-//        for (int i = 0; i < 100_000; ++i) {
-            new SimpleBlockingClientMain().run();
-//        }
+        //                for (int i = 0; i < 1000; ++i) {
+        new SimpleBlockingClientMain().run();
+        //                }
     }
 
     public void run() throws IOException {
@@ -65,9 +68,28 @@ public final class SimpleBlockingClientMain {
 
                 try (DataInputStream dataIn = new DataInputStream(leader.getInputStream());
                         DataOutputStream dataOut = new DataOutputStream(leader.getOutputStream())) {
-                    sendCommand(new CreateTopicCommand("topic-a", 3), dataOut);
-                    CommandResponse response =
-                            CommandResponseDecoder.decode(DataIn.fromStandardStream(dataIn));
+
+                    final String topicName = "topic-a";
+
+                    sendCommand(new CreateTopicCommand(topicName, 3), dataOut);
+                    CreateTopicCommandResponse response =
+                            (CreateTopicCommandResponse)
+                                    CommandResponseDecoder.decode(
+                                            DataIn.fromStandardStream(dataIn));
+                    if (response.status() == 200) {
+                        System.out.printf("Create topic '%s' success.%n", topicName);
+
+                        TopicInfo info = response.info();
+
+                        int parIdx = 0;
+                        for (TopicPartitionInfo partitionInfo : info.partitions()) {
+                            System.out.printf("[partition-%d]: %s%n", parIdx, partitionInfo);
+                            ++parIdx;
+                        }
+
+                    } else {
+                        System.err.printf("Create topic '%s' FAILED.%n", topicName);
+                    }
                 }
 
             } finally {

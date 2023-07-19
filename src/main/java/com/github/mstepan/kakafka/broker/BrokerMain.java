@@ -20,6 +20,7 @@ import io.netty.bootstrap.ServerBootstrap;
 import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelInitializer;
 import io.netty.channel.ChannelOption;
+import io.netty.channel.ChannelPipeline;
 import io.netty.channel.EventLoopGroup;
 import io.netty.channel.nio.NioEventLoopGroup;
 import io.netty.channel.socket.SocketChannel;
@@ -106,17 +107,24 @@ public final class BrokerMain {
                             new ChannelInitializer<SocketChannel>() {
                                 @Override
                                 public void initChannel(SocketChannel ch) {
-                                    ch.pipeline()
-                                            .addLast(
-                                                    new CommandDecoder(),
-                                                    new CommandResponseEncoder(),
-                                                    new ExitCommandServerHandler(
-                                                            brokerCtx.config().brokerName()),
-                                                    new GetMetadataCommandServerHandler(
-                                                            brokerCtx.config().brokerName(),
-                                                            brokerCtx.metadata()),
-                                                    new CreateTopicCommandServerHandler(
-                                                            brokerCtx.config().brokerName()));
+
+                                    final ChannelPipeline pipeline = ch.pipeline();
+
+                                    pipeline.addLast(new CommandDecoder());
+
+                                    pipeline.addLast(new CommandResponseEncoder());
+
+                                    pipeline.addLast(
+                                            new ExitCommandServerHandler(
+                                                    brokerCtx.config().brokerName()));
+
+                                    pipeline.addLast(
+                                            new GetMetadataCommandServerHandler(
+                                                    brokerCtx.config().brokerName(),
+                                                    brokerCtx.metadata()));
+
+                                    pipeline.addLast(
+                                            new CreateTopicCommandServerHandler(brokerCtx));
                                 }
                             })
                     // The number of connections to be queued.
