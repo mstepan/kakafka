@@ -1,6 +1,7 @@
 package com.github.mstepan.kakafka.broker.utils;
 
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicInteger;
 
 /** Different thread related methods. */
 public final class ThreadUtils {
@@ -38,6 +39,15 @@ public final class ThreadUtils {
     public static void notifyAllOn(Object mutex) {
         synchronized (mutex) {
             mutex.notifyAll();
+        }
+    }
+
+    public static void decrementBy(AtomicInteger counter, int decValue) {
+        while (true) {
+            int prevValue = counter.get();
+            if (counter.compareAndSet(prevValue, prevValue - decValue)) {
+                return;
+            }
         }
     }
 }

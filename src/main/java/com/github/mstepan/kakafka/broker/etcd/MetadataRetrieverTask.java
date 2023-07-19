@@ -18,8 +18,11 @@ import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.ExecutionException;
+import java.util.concurrent.atomic.AtomicInteger;
 
 public class MetadataRetrieverTask implements Runnable {
+
+    private static final long SLEEP_TIMEOUT_IN_SEC = 2L;
 
     private static final ByteSequence BROKER_KEY_PREFIX =
             EtcdUtils.toByteSeq(BrokerConfig.BROKER_KEY_PREFIX);
@@ -30,32 +33,38 @@ public class MetadataRetrieverTask implements Runnable {
         this.brokerCtx = brokerCtx;
     }
 
-    // The 'MetadataRetrieverTask' thread will be blocked on 'mutex' until
-    // we detect changes in 'BROKER_KEY_PREFIX' path.
-    private final Object mutex = new Object();
+    private final AtomicInteger liveBrokerEventsCount = new AtomicInteger(0);
 
     @Override
     public void run() {
         System.out.printf(
                 "[%s] Metadata retriever thread started", brokerCtx.config().brokerName());
 
-        fetchLiveBrokersFromEtcd();
-
         watchForChanges();
 
+        fetchLiveBrokersFromEtcd(liveBrokerEventsCount.get());
+
         while (!Thread.currentThread().isInterrupted()) {
-            ThreadUtils.waitOn(mutex);
-            fetchLiveBrokersFromEtcd();
+
+            ThreadUtils.sleepSec(SLEEP_TIMEOUT_IN_SEC);
+
+            int newEventsCount = liveBrokerEventsCount.get();
+
+            if (newEventsCount != 0) {
+                fetchLiveBrokersFromEtcd(newEventsCount);
+            }
         }
     }
 
-    private void fetchLiveBrokersFromEtcd() {
+    private void fetchLiveBrokersFromEtcd(int eventsCount) {
         try {
             final KV kvClient = brokerCtx.etcdClientHolder().kvClient();
 
             GetResponse getResp =
                     kvClient.get(BROKER_KEY_PREFIX, GetOption.newBuilder().isPrefix(true).build())
                             .get();
+
+            ThreadUtils.decrementBy(liveBrokerEventsCount, eventsCount);
 
             System.out.printf(
                     "[%s] metadata state obtained from 'etcd' %n", brokerCtx.config().brokerName());
@@ -108,7 +117,9 @@ public class MetadataRetrieverTask implements Runnable {
                                 System.out.println("UNRECOGNIZED event");
                             }
 
-                            ThreadUtils.notifyAllOn(mutex);
+                            liveBrokerEventsCount.incrementAndGet();
+
+                            //                            ThreadUtils.notifyAllOn(mutex);
                         }
                     }
 
