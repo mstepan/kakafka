@@ -4,9 +4,13 @@
 
 CONTAINER_NAME=etcd-kakafka
 
+echo "Stopping docker '${CONTAINER_NAME}' container if any"
 docker stop ${CONTAINER_NAME}
+
+echo "Removing docker '${CONTAINER_NAME}' container if any"
 docker rm ${CONTAINER_NAME}
 
+echo "Starting '${CONTAINER_NAME}'"
 docker run \
   --name ${CONTAINER_NAME} \
   --publish 2379:2379 \
