@@ -7,7 +7,7 @@ import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelInboundHandlerAdapter;
 import io.netty.util.ReferenceCountUtil;
 
-public class ExitCommandServerHandler extends ChannelInboundHandlerAdapter {
+public final class ExitCommandServerHandler extends ChannelInboundHandlerAdapter {
 
     private final String brokerName;
 

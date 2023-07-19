@@ -25,7 +25,7 @@ import java.util.concurrent.TimeUnit;
  * '/kakafka/brokers/<broker-name>' => '<broker full URL>'. Example:
  * '/kakafka/brokers/broker-dbea19ad-aa1e-4b6c-8673-7c3fbc9a7755' => "localhost:9090"
  */
-public class KeepAliveAndLeaderElectionTask implements Runnable {
+public final class KeepAliveAndLeaderElectionTask implements Runnable {
 
     private static final ByteSequence LEADER_KEY = EtcdUtils.toByteSeq("/kakafka/leader");
 

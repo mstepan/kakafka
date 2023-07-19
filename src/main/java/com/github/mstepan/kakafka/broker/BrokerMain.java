@@ -4,7 +4,7 @@ import com.github.mstepan.kakafka.broker.core.BrokerNameFactory;
 import com.github.mstepan.kakafka.broker.core.MetadataStorage;
 import com.github.mstepan.kakafka.broker.etcd.EtcdClientHolder;
 import com.github.mstepan.kakafka.broker.etcd.KeepAliveAndLeaderElectionTask;
-import com.github.mstepan.kakafka.broker.etcd.MetadataRetrieverTask;
+import com.github.mstepan.kakafka.broker.etcd.LiveBrokersTrackerTask;
 import com.github.mstepan.kakafka.broker.handlers.CreateTopicCommandServerHandler;
 import com.github.mstepan.kakafka.broker.handlers.ExitCommandServerHandler;
 import com.github.mstepan.kakafka.broker.handlers.GetMetadataCommandServerHandler;
@@ -29,7 +29,7 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ThreadLocalRandom;
 
-public class BrokerMain {
+public final class BrokerMain {
 
     private final BrokerContext brokerCtx;
 
@@ -86,7 +86,7 @@ public class BrokerMain {
                 Executors.newFixedThreadPool(2, new DaemonThreadFactory());
 
         backgroundTasksPool.execute(new KeepAliveAndLeaderElectionTask(brokerCtx));
-        backgroundTasksPool.execute(new MetadataRetrieverTask(brokerCtx));
+        backgroundTasksPool.execute(new LiveBrokersTrackerTask(brokerCtx));
 
         // leak detector
         // https://netty.io/wiki/reference-counted-objects.html

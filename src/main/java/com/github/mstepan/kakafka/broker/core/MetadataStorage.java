@@ -1,27 +1,38 @@
 package com.github.mstepan.kakafka.broker.core;
 
-import java.util.Collections;
 import java.util.List;
+import java.util.Map;
 import java.util.Objects;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.AtomicReference;
 
 public class MetadataStorage {
 
     private final AtomicReference<String> leaderBrokerNameRef = new AtomicReference<>();
 
-    private final AtomicReference<List<LiveBroker>> liveBrokersRef = new AtomicReference<>();
+    private final Map<String, LiveBroker> liveBrokers = new ConcurrentHashMap<>();
 
     public void setLeader(String brokerName) {
         Objects.requireNonNull(brokerName, "null 'brokerName' during set operation");
         this.leaderBrokerNameRef.set(brokerName);
     }
 
-    public void setLiveBrokers(List<LiveBroker> liveBrokers) {
-        liveBrokersRef.set(Collections.unmodifiableList(liveBrokers));
+    public void addLiveBrokers(List<LiveBroker> brokers) {
+        for (LiveBroker curBroker : brokers) {
+            liveBrokers.put(curBroker.id(), curBroker);
+        }
     }
 
     public MetadataState getMetadataState() {
-        return new MetadataState(leaderBrokerNameRef.get(), liveBrokersRef.get());
+        return new MetadataState(leaderBrokerNameRef.get(), liveBrokers.values());
+    }
+
+    public void addLiveBroker(LiveBroker newLiveBroker) {
+        liveBrokers.put(newLiveBroker.id(), newLiveBroker);
+    }
+
+    public void deleteLiveBroker(String brokerId) {
+        liveBrokers.remove(brokerId);
     }
 
     //    public CompletableFuture<GetResponse> getMetadataState() {

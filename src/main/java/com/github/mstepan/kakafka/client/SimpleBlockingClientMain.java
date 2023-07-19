@@ -18,7 +18,7 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 
-public class SimpleBlockingClientMain {
+public final class SimpleBlockingClientMain {
 
     private static final int NO_AVAILABLE_BROKERS_EXIT_CODE = 3;
     private static final int CANT_CONNECT_TO_LEADER_EXIT_CODE = 4;
@@ -33,9 +33,9 @@ public class SimpleBlockingClientMain {
                     new BrokerHost("localhost", 9095));
 
     public static void main(String[] args) throws Exception {
-//        for (int i = 0; i < 1000; ++i) {
+        for (int i = 0; i < 1000; ++i) {
             new SimpleBlockingClientMain().run();
-//        }
+        }
     }
 
     public void run() throws IOException {

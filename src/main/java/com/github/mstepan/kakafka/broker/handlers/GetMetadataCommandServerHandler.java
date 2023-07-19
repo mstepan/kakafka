@@ -8,7 +8,7 @@ import com.github.mstepan.kakafka.command.response.MetadataCommandResponse;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelInboundHandlerAdapter;
 
-public class GetMetadataCommandServerHandler extends ChannelInboundHandlerAdapter {
+public final class GetMetadataCommandServerHandler extends ChannelInboundHandlerAdapter {
 
     private final String brokerName;
 

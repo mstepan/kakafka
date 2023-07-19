@@ -15,7 +15,7 @@ import io.netty.channel.socket.SocketChannel;
 import io.netty.channel.socket.nio.NioSocketChannel;
 import io.netty.util.ResourceLeakDetector;
 
-public class NettyClientMain {
+public final class NettyClientMain {
 
     private static final String HOST = "localhost";
 

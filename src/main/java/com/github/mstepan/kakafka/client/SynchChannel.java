@@ -2,7 +2,7 @@ package com.github.mstepan.kakafka.client;
 
 import java.util.concurrent.SynchronousQueue;
 
-public class SynchChannel<T> {
+public final class SynchChannel<T> {
 
     private final SynchronousQueue<T> syncState = new SynchronousQueue<>();
 

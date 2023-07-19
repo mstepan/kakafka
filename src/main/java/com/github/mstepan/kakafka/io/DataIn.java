@@ -5,7 +5,7 @@ import java.io.DataInputStream;
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 
-public class DataIn {
+public final class DataIn {
 
     private ByteBuf nettyBuf;
 

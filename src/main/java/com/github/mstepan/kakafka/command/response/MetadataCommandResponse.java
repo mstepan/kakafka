@@ -6,6 +6,7 @@ import com.github.mstepan.kakafka.command.CommandMarker;
 import com.github.mstepan.kakafka.io.DataIn;
 import com.github.mstepan.kakafka.io.DataOut;
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.List;
 
 public record MetadataCommandResponse(MetadataState state, int statusCode)
@@ -28,7 +29,7 @@ public record MetadataCommandResponse(MetadataState state, int statusCode)
         //
         // | <live brokers count>, int | <broker-1> | ... | <broker-n> |
         //
-        List<LiveBroker> brokers = state().brokers();
+        Collection<LiveBroker> brokers = state().brokers();
         out.writeInt(brokers.size());
 
         for (LiveBroker singleBroker : brokers) {

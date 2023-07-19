@@ -4,7 +4,6 @@ import com.github.mstepan.kakafka.broker.BrokerConfig;
 import com.github.mstepan.kakafka.broker.BrokerContext;
 import com.github.mstepan.kakafka.broker.core.LiveBroker;
 import com.github.mstepan.kakafka.broker.utils.EtcdUtils;
-import com.github.mstepan.kakafka.broker.utils.ThreadUtils;
 import io.etcd.jetcd.ByteSequence;
 import io.etcd.jetcd.KV;
 import io.etcd.jetcd.KeyValue;
@@ -17,23 +16,26 @@ import io.etcd.jetcd.watch.WatchResponse;
 import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.concurrent.ArrayBlockingQueue;
+import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.ExecutionException;
-import java.util.concurrent.atomic.AtomicInteger;
 
-public class MetadataRetrieverTask implements Runnable {
-
-    private static final long SLEEP_TIMEOUT_IN_SEC = 2L;
+/**
+ * This task tracks live brokers in a separate thread and updates 'MetadataStorage.liveBrokers' map
+ * properly.
+ */
+public class LiveBrokersTrackerTask implements Runnable {
 
     private static final ByteSequence BROKER_KEY_PREFIX =
             EtcdUtils.toByteSeq(BrokerConfig.BROKER_KEY_PREFIX);
 
     private final BrokerContext brokerCtx;
 
-    public MetadataRetrieverTask(BrokerContext brokerCtx) {
+    public LiveBrokersTrackerTask(BrokerContext brokerCtx) {
         this.brokerCtx = brokerCtx;
     }
 
-    private final AtomicInteger liveBrokerEventsCount = new AtomicInteger(0);
+    private final BlockingQueue<WatchEvent> brokerNewEvents = new ArrayBlockingQueue<>(1024);
 
     @Override
     public void run() {
@@ -42,21 +44,29 @@ public class MetadataRetrieverTask implements Runnable {
 
         watchForChanges();
 
-        fetchLiveBrokersFromEtcd(liveBrokerEventsCount.get());
+        fetchLiveBrokersFromEtcd();
 
         while (!Thread.currentThread().isInterrupted()) {
+            try {
+                WatchEvent newEvent = brokerNewEvents.take();
 
-            ThreadUtils.sleepSec(SLEEP_TIMEOUT_IN_SEC);
+                if (newEvent.getEventType() == WatchEvent.EventType.PUT) {
 
-            int newEventsCount = liveBrokerEventsCount.get();
+                    final String brokerId = extractBrokerId(newEvent.getKeyValue());
+                    final String brokerUrl = extractBrokerUrl(newEvent.getKeyValue());
 
-            if (newEventsCount != 0) {
-                fetchLiveBrokersFromEtcd(newEventsCount);
+                    brokerCtx.metadata().addLiveBroker(new LiveBroker(brokerId, brokerUrl));
+                } else if (newEvent.getEventType() == WatchEvent.EventType.DELETE) {
+                    brokerCtx.metadata().deleteLiveBroker(extractBrokerId(newEvent.getKeyValue()));
+                }
+
+            } catch (InterruptedException interEx) {
+                Thread.currentThread().interrupt();
             }
         }
     }
 
-    private void fetchLiveBrokersFromEtcd(int eventsCount) {
+    private void fetchLiveBrokersFromEtcd() {
         try {
             final KV kvClient = brokerCtx.etcdClientHolder().kvClient();
 
@@ -64,29 +74,35 @@ public class MetadataRetrieverTask implements Runnable {
                     kvClient.get(BROKER_KEY_PREFIX, GetOption.newBuilder().isPrefix(true).build())
                             .get();
 
-            ThreadUtils.decrementBy(liveBrokerEventsCount, eventsCount);
-
             System.out.printf(
-                    "[%s] metadata state obtained from 'etcd' %n", brokerCtx.config().brokerName());
+                    "[%s] metadata state obtained from 'etcd'%n", brokerCtx.config().brokerName());
 
             List<LiveBroker> liveBrokers = new ArrayList<>();
             for (KeyValue keyValue : getResp.getKvs()) {
 
-                // 'brokerIdPath' example
-                // '/kakafka/brokers/broker-3b93e71d-df46-4a4a-98ac-41a1eaf9216c'
-                String brokerIdPath = keyValue.getKey().toString(StandardCharsets.US_ASCII);
+                // 'keyValue.key' = '/kakafka/brokers/broker-3b93e71d-df46-4a4a-98ac-41a1eaf9216c'
+                final String brokerId = extractBrokerId(keyValue);
 
-                final String brokerName = brokerIdPath.substring(brokerIdPath.lastIndexOf("/") + 1);
-                final String brokerUrl = keyValue.getValue().toString(StandardCharsets.US_ASCII);
+                // 'keyValue.value' = 'localhost:9090'
+                final String brokerUrl = extractBrokerUrl(keyValue);
 
-                liveBrokers.add(new LiveBroker(brokerName, brokerUrl));
+                liveBrokers.add(new LiveBroker(brokerId, brokerUrl));
             }
 
-            brokerCtx.metadata().setLiveBrokers(liveBrokers);
+            brokerCtx.metadata().addLiveBrokers(liveBrokers);
 
         } catch (InterruptedException | ExecutionException ex) {
             ex.printStackTrace();
         }
+    }
+
+    private static String extractBrokerId(KeyValue keyValue) {
+        String brokerIdPath = keyValue.getKey().toString(StandardCharsets.US_ASCII);
+        return brokerIdPath.substring(brokerIdPath.lastIndexOf("/") + 1);
+    }
+
+    private static String extractBrokerUrl(KeyValue keyValue) {
+        return keyValue.getValue().toString(StandardCharsets.US_ASCII);
     }
 
     private void watchForChanges() {
@@ -102,24 +118,16 @@ public class MetadataRetrieverTask implements Runnable {
                         List<WatchEvent> events = watchResponse.getEvents();
 
                         for (WatchEvent singleEvent : events) {
-                            if (singleEvent.getEventType() == WatchEvent.EventType.PUT) {
-                                System.out.printf(
-                                        "PUT %s => %s%n",
-                                        singleEvent.getKeyValue().getKey().toString(),
-                                        singleEvent.getKeyValue().getValue().toString());
 
-                            } else if (singleEvent.getEventType() == WatchEvent.EventType.DELETE) {
-                                System.out.printf(
-                                        "DELETE %s%n",
-                                        singleEvent.getKeyValue().getKey().toString());
-
+                            if (singleEvent.getEventType() == WatchEvent.EventType.UNRECOGNIZED) {
+                                System.err.println("UNRECOGNIZED event");
                             } else {
-                                System.out.println("UNRECOGNIZED event");
+                                // PUT & DELETE only here
+                                if (!brokerNewEvents.offer(singleEvent)) {
+                                    System.err.println(
+                                            "Can't insert events into 'brokerNewEvents', queue is FULL.");
+                                }
                             }
-
-                            liveBrokerEventsCount.incrementAndGet();
-
-                            //                            ThreadUtils.notifyAllOn(mutex);
                         }
                     }
 

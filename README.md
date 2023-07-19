@@ -17,6 +17,25 @@ Use the following:
 ./mvnw test
 ```
 
+## Local run
+
+To start a single broker or set of broker execute:
+
+```bash
+./run.sh
+```
+
+Inside mentioned above file you can find cluster configuration:
+```
+cluster_mode=true
+NODES_CNT=5
+```
+
+To stop all running brokers execute:
+```bash
+./stop-all.sh
+```
+
 ## Kakafka Protocol Description
 
 //todo:  
