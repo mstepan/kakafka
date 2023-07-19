@@ -47,6 +47,7 @@ public final class KeepAliveAndLeaderElectionTask implements Runnable {
 
     @Override
     public void run() {
+        Thread.currentThread().setName("KeepAliveAndLeaderElectionTask");
         try {
             final Lease leaseClient = brokerCtx.etcdClientHolder().leaseClient();
             final KV kvClient = brokerCtx.etcdClientHolder().kvClient();

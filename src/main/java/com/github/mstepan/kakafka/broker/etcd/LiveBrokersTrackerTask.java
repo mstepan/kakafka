@@ -39,6 +39,7 @@ public class LiveBrokersTrackerTask implements Runnable {
 
     @Override
     public void run() {
+        Thread.currentThread().setName("LiveBrokersTrackerTask");
         System.out.printf(
                 "[%s] Metadata retriever thread started", brokerCtx.config().brokerName());
 

@@ -33,9 +33,9 @@ public final class SimpleBlockingClientMain {
                     new BrokerHost("localhost", 9095));
 
     public static void main(String[] args) throws Exception {
-        for (int i = 0; i < 1000; ++i) {
+//        for (int i = 0; i < 100_000; ++i) {
             new SimpleBlockingClientMain().run();
-        }
+//        }
     }
 
     public void run() throws IOException {
