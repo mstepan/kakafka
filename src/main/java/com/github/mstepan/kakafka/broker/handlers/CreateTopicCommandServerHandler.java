@@ -12,6 +12,7 @@ import com.github.mstepan.kakafka.command.CreateTopicCommand;
 import com.github.mstepan.kakafka.command.response.CreateTopicCommandResponse;
 import io.etcd.jetcd.ByteSequence;
 import io.etcd.jetcd.KV;
+import io.etcd.jetcd.KeyValue;
 import io.etcd.jetcd.kv.GetResponse;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelInboundHandlerAdapter;
@@ -124,8 +125,15 @@ public final class CreateTopicCommandServerHandler extends ChannelInboundHandler
                                         .formatted(command.topicName())));
             }
 
+            // TODO: below code added temporary to testing purpose
             // store 'TopicInfo' as binary encoded value
-            kvClient.put(topicKey, ByteSequence.from(topicInfo.toBytes())).get();
+            //            kvClient.put(topicKey, ByteSequence.from(topicInfo.toBytes())).get();
+            //
+            //            GetResponse topicGetResponseAfterPut = kvClient.get(topicKey).get();
+            //
+            //            KeyValue keyValue = topicGetResponseAfterPut.getKvs().get(0);
+            //
+            //            return Either.ok(TopicInfo.fromBytes(keyValue.getValue().getBytes()));
 
             return Either.ok(topicInfo);
         } catch (Exception ex) {
