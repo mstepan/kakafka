@@ -28,61 +28,11 @@ public final class GetMetadataCommandServerHandler extends ChannelInboundHandler
             System.out.printf("[%s] 'get_metadata' command received %n", brokerName);
 
             MetadataState state = metadata.getMetadataState();
-
             ctx.writeAndFlush(new MetadataCommandResponse(state, 200));
-
-            //            metadata.getMetadataState().whenComplete(new MetadataListener(ctx, msg));
         } else {
             ctx.fireChannelRead(msg);
         }
     }
-
-    //    private final class MetadataListener implements BiConsumer<GetResponse, Throwable> {
-    //
-    //        private final ChannelHandlerContext ctx;
-    //        private final Object msg;
-    //
-    //        public MetadataListener(ChannelHandlerContext ctx, Object msg) {
-    //            this.ctx = ctx;
-    //            this.msg = msg;
-    //        }
-    //
-    //        @Override
-    //        public void accept(GetResponse getResp, Throwable ex) {
-    //            try {
-    //                if (ex != null) {
-    //                    System.out.printf(
-    //                            "[%s] getting metadata state from 'etcd' FAILED %n", brokerName);
-    //                    ex.printStackTrace();
-    //                    ctx.writeAndFlush(new MetadataCommandResponse(null, 500));
-    //                    return;
-    //                }
-    //
-    //                System.out.printf("[%s] metadata state obtained from 'etcd' %n", brokerName);
-    //
-    //                List<LiveBroker> liveBrokers = new ArrayList<>();
-    //                for (KeyValue keyValue : getResp.getKvs()) {
-    //
-    //                    String brokerIdPath =
-    // keyValue.getKey().toString(StandardCharsets.US_ASCII);
-    //
-    //                    final String brokerName =
-    //                            brokerIdPath.substring(brokerIdPath.lastIndexOf("/") + 1);
-    //                    final String brokerUrl =
-    //                            keyValue.getValue().toString(StandardCharsets.US_ASCII);
-    //
-    //                    liveBrokers.add(new LiveBroker(brokerName, brokerUrl));
-    //                }
-    //
-    //                MetadataState state =
-    //                        new MetadataState(metadata.getLeaderBrokerName(), liveBrokers);
-    //
-    //                ctx.writeAndFlush(new MetadataCommandResponse(state, 200));
-    //            } finally {
-    //                ReferenceCountUtil.release(msg);
-    //            }
-    //        }
-    //    }
 
     @Override
     public void exceptionCaught(ChannelHandlerContext ctx, Throwable ex) throws Exception {

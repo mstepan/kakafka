@@ -5,12 +5,14 @@ import com.github.mstepan.kakafka.broker.core.LiveBroker;
 import com.github.mstepan.kakafka.broker.core.MetadataStorage;
 import com.github.mstepan.kakafka.broker.core.topic.TopicInfo;
 import com.github.mstepan.kakafka.broker.core.topic.TopicPartitionInfo;
+import com.github.mstepan.kakafka.broker.utils.EtcdUtils;
 import com.github.mstepan.kakafka.command.Command;
 import com.github.mstepan.kakafka.command.CreateTopicCommand;
 import com.github.mstepan.kakafka.command.response.CreateTopicCommandResponse;
+import io.etcd.jetcd.ByteSequence;
+import io.etcd.jetcd.KV;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelInboundHandlerAdapter;
-import io.netty.util.ReferenceCountUtil;
 import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.List;
@@ -31,19 +33,24 @@ public final class CreateTopicCommandServerHandler extends ChannelInboundHandler
         Command command = (Command) msg;
 
         if (command instanceof CreateTopicCommand createTopicCommand) {
-            try {
-                System.out.printf(
-                        "[%s] 'create_topic'command for topic '%s' with '%d' partitions %n",
-                        brokerName,
-                        createTopicCommand.topicName(),
-                        createTopicCommand.partitionsCount());
+            System.out.printf(
+                    "[%s] 'create_topic'command for topic '%s' with '%d' partitions %n",
+                    brokerName,
+                    createTopicCommand.topicName(),
+                    createTopicCommand.partitionsCount());
 
-                TopicInfo info = createTopicInEtcd(brokerCtx.metadata(), createTopicCommand);
+            //
+            // CreateTopicCommandServerHandler handler is calling 'createTopicInEtcd' method in a
+            // blocking fashion,
+            // so it will be executed in separate 'EventExecutorGroup' called
+            // 'BrokerMain.IO_BLOCKING_OPERATIONS_GROUP'
+            //
+            TopicInfo topicInfo = createTopicInEtcd(brokerCtx.metadata(), createTopicCommand);
 
-                ctx.writeAndFlush(new CreateTopicCommandResponse(info, 200));
-            } finally {
-                ReferenceCountUtil.release(msg);
-            }
+            ctx.writeAndFlush(new CreateTopicCommandResponse(topicInfo, 200));
+
+            System.out.printf("[%s] broker ready to handle other requests%n", brokerName);
+
         } else {
             ctx.fireChannelRead(msg);
         }
@@ -70,28 +77,48 @@ public final class CreateTopicCommandServerHandler extends ChannelInboundHandler
      */
     private TopicInfo createTopicInEtcd(MetadataStorage metadata, CreateTopicCommand command) {
 
-        List<LiveBroker> brokersSampling =
-                metadata.getSamplingOfLiveBrokers(
-                        command.partitionsCount() * command.replicasCnt());
+        try {
+            List<LiveBroker> brokersSampling =
+                    metadata.getSamplingOfLiveBrokers(
+                            command.partitionsCount() * command.replicasCnt());
 
-        List<TopicPartitionInfo> partitions = new ArrayList<>();
+            List<TopicPartitionInfo> partitions = new ArrayList<>();
 
-        Iterator<LiveBroker> samplingIt = brokersSampling.iterator();
-        for (int parId = 0; parId < command.partitionsCount(); ++parId) {
+            Iterator<LiveBroker> samplingIt = brokersSampling.iterator();
+            for (int parId = 0; parId < command.partitionsCount(); ++parId) {
 
-            LiveBroker partitionLeader = samplingIt.next();
+                LiveBroker partitionLeader = samplingIt.next();
 
-            partitions.add(
-                    new TopicPartitionInfo(
-                            partitionLeader.id(),
-                            createReplicas(samplingIt, command.replicasCnt() - 1)));
+                partitions.add(
+                        new TopicPartitionInfo(
+                                partitionLeader.id(),
+                                createReplicas(samplingIt, command.replicasCnt() - 1)));
+            }
+
+            System.out.printf(
+                    "[%s] partitions = '%s'%n", brokerCtx.config().brokerName(), partitions);
+
+            TopicInfo topicInfo = new TopicInfo(partitions);
+
+            @SuppressWarnings("resource")
+            KV kvClient = brokerCtx.etcdClientHolder().kvClient();
+
+            final ByteSequence topicKey =
+                    EtcdUtils.toByteSeq("/kakafka/topics/%s".formatted(command.topicName()));
+
+            // todo: check if topic key already exists, if not create one, otherwise
+            // fail
+
+            // todo: save normal TopicInfo here, not toString value
+            final ByteSequence topicValue = EtcdUtils.toByteSeq(topicInfo.toString());
+
+            kvClient.put(topicKey, topicValue).get();
+
+            return topicInfo;
+        } catch (Exception ex) {
+            ex.printStackTrace();
+            throw new IllegalStateException(ex);
         }
-
-        System.out.printf("[%s] partitions = '%s'%n", brokerCtx.config().brokerName(), partitions);
-
-        // todo: save topic info with partitions in 'etcd'
-
-        return new TopicInfo(partitions);
     }
 
     private List<String> createReplicas(Iterator<LiveBroker> samplingIt, int count) {

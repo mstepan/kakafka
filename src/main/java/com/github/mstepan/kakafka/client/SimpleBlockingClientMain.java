@@ -20,8 +20,6 @@ import java.net.Socket;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
-import java.util.Timer;
-import java.util.concurrent.TimeUnit;
 
 public final class SimpleBlockingClientMain {
 
@@ -40,9 +38,32 @@ public final class SimpleBlockingClientMain {
                     new BrokerHost("localhost", 9095));
 
     public static void main(String[] args) throws Exception {
-        for (int i = 0; i < 1_000_000; ++i) {
-            new SimpleBlockingClientMain().run();
-            TimeUnit.SECONDS.sleep(1L);
+
+        final int iterationsCount = 1;
+        final int clientsCount = 1;
+        final Thread[] clients = new Thread[clientsCount];
+
+        for (int i = 0; i < clients.length; ++i) {
+            clients[i] =
+                    new Thread(
+                            () -> {
+                                try {
+                                    for (int it = 0; it < iterationsCount; ++it) {
+                                        new SimpleBlockingClientMain().run();
+                                        //
+                                        // TimeUnit.SECONDS.sleep(1L);
+                                    }
+                                } catch (Exception ex) {
+                                    ex.printStackTrace();
+                                }
+                            });
+        }
+        for (Thread curClientTh : clients) {
+            curClientTh.start();
+        }
+
+        for (Thread curClientTh : clients) {
+            curClientTh.join();
         }
     }
 
@@ -76,7 +97,7 @@ public final class SimpleBlockingClientMain {
 
                     final String topicName = "topic-a";
                     final int partitionsCnt = 3;
-                    final int replicasCnt = 5;
+                    final int replicasCnt = 3;
 
                     CreateTopicCommandResponse createTopicResponse =
                             createTopic(topicName, partitionsCnt, replicasCnt, dataIn, dataOut);

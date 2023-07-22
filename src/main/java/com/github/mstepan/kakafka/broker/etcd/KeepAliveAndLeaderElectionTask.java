@@ -45,6 +45,7 @@ public final class KeepAliveAndLeaderElectionTask implements Runnable {
         this.brokerCtx = brokerCtx;
     }
 
+    @SuppressWarnings("resource")
     @Override
     public void run() {
         Thread.currentThread().setName("KeepAliveAndLeaderElectionTask");
@@ -58,6 +59,7 @@ public final class KeepAliveAndLeaderElectionTask implements Runnable {
             final BrokerConfig config = brokerCtx.config();
             final MetadataStorage metadata = brokerCtx.metadata();
 
+            // create LEASE for this broker
             LeaseGrantResponse leaseResp =
                     leaseClient
                             .grant(
@@ -68,18 +70,28 @@ public final class KeepAliveAndLeaderElectionTask implements Runnable {
 
             System.out.printf("[%s] etcd LEASE granted%n", brokerName);
 
+            //
+            // add current broker to list of active brokers
+            //
             kvClient.put(
-                    EtcdUtils.toByteSeq(BROKER_KEY_PREFIX_TEMPLATE.formatted(brokerName)),
-                    EtcdUtils.toByteSeq(config.url()),
-                    PutOption.newBuilder().withLeaseId(leaseResp.getID()).build());
+                            EtcdUtils.toByteSeq(BROKER_KEY_PREFIX_TEMPLATE.formatted(brokerName)),
+                            EtcdUtils.toByteSeq(config.url()),
+                            PutOption.newBuilder().withLeaseId(leaseResp.getID()).build())
+                    .get();
 
             System.out.printf(
                     "[%s] registering active broker at prefix '%s' %n",
                     config.brokerName(), BROKER_KEY_PREFIX_TEMPLATE.formatted(brokerName));
 
+            //
+            // Add leader election listener to obtain leader change notifications
+            //
             electionClient.observe(LEADER_KEY, new LeaderElectionListener(brokerName, metadata));
 
+            //
+            // Start leader election in a separate verte.x thread
             // https://github.com/etcd-io/jetcd/blob/main/jetcd-core/src/main/java/io/etcd/jetcd/Election.java
+            //
             electionClient.campaign(LEADER_KEY, leaseResp.getID(), EtcdUtils.toByteSeq(brokerName));
 
             System.out.printf("[%s] etcd LEADER ELECTION started%n", brokerName);

@@ -26,6 +26,8 @@ import io.netty.channel.nio.NioEventLoopGroup;
 import io.netty.channel.socket.SocketChannel;
 import io.netty.channel.socket.nio.NioServerSocketChannel;
 import io.netty.util.ResourceLeakDetector;
+import io.netty.util.concurrent.DefaultEventExecutorGroup;
+import io.netty.util.concurrent.EventExecutorGroup;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ThreadLocalRandom;
@@ -37,6 +39,14 @@ public final class BrokerMain {
     public BrokerMain(BrokerContext brokerCtx) {
         this.brokerCtx = brokerCtx;
     }
+
+    /**
+     * This group will be used for blocking I/O calls, such as blocking calls to 'etcd' using
+     * 'jetcd' client.
+     * https://stackoverflow.com/questions/49133447/how-can-you-safely-perform-blocking-operations-in-a-netty-channel-handler
+     */
+    private static final EventExecutorGroup IO_BLOCKING_OPERATIONS_GROUP =
+            new DefaultEventExecutorGroup(64);
 
     public static void main(String[] args) throws Exception {
         final BrokerNameFactory nameFac = new BrokerNameFactory();
@@ -110,20 +120,25 @@ public final class BrokerMain {
 
                                     final ChannelPipeline pipeline = ch.pipeline();
 
-                                    pipeline.addLast(new CommandDecoder());
-
-                                    pipeline.addLast(new CommandResponseEncoder());
+                                    pipeline.addLast("commandDecoder", new CommandDecoder());
 
                                     pipeline.addLast(
+                                            "commandResponseEncoder", new CommandResponseEncoder());
+
+                                    pipeline.addLast(
+                                            "exitHandler",
                                             new ExitCommandServerHandler(
                                                     brokerCtx.config().brokerName()));
 
                                     pipeline.addLast(
+                                            "getMetadataHandler",
                                             new GetMetadataCommandServerHandler(
                                                     brokerCtx.config().brokerName(),
                                                     brokerCtx.metadata()));
 
                                     pipeline.addLast(
+                                            IO_BLOCKING_OPERATIONS_GROUP,
+                                            "createTopicHandler",
                                             new CreateTopicCommandServerHandler(brokerCtx));
                                 }
                             })
