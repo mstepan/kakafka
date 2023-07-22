@@ -40,8 +40,8 @@ public final class SimpleBlockingClientMain {
 
     public static void main(String[] args) throws Exception {
 
-        final int iterationsCount = 100;
-        final int clientsCount = 100;
+        final int iterationsCount = 10;
+        final int clientsCount = 10;
         final Thread[] clients = new Thread[clientsCount];
 
         for (int i = 0; i < clients.length; ++i) {

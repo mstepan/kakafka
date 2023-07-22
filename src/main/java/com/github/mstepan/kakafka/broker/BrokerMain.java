@@ -46,7 +46,8 @@ public final class BrokerMain {
      * https://stackoverflow.com/questions/49133447/how-can-you-safely-perform-blocking-operations-in-a-netty-channel-handler
      */
     private static final EventExecutorGroup IO_BLOCKING_OPERATIONS_GROUP =
-            new DefaultEventExecutorGroup(64);
+            new DefaultEventExecutorGroup(
+                    64, new DaemonThreadFactory("netty-io-blocking-operations-group"));
 
     public static void main(String[] args) throws Exception {
         final BrokerNameFactory nameFac = new BrokerNameFactory();
