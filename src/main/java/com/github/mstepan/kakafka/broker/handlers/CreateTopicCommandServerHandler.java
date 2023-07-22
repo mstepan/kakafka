@@ -55,12 +55,24 @@ public final class CreateTopicCommandServerHandler extends ChannelInboundHandler
         ctx.close();
     }
 
-    private static final int REPLICATION_FACTOR = 3;
-
+    /**
+     * The 'TopicInfo' contains list of 'TopicPartitionInfo' values:
+     *
+     * <p>[partition-0] [leader=broker-ff5ebc71-ddf5-4f0d-9799-be784640d7c7,
+     * replicas=[broker-87f2d83a-b58a-4b90-a441-7077b2713419,
+     * broker-26fc73c5-38c2-476a-8a72-65516a91de26]] [partition-1]
+     * [leader=broker-7a9af119-d0ba-4aed-8594-19f41b9fe13f,
+     * replicas=[broker-8c3598fc-e389-495c-b29c-b5d983afff1e,
+     * broker-ff5ebc71-ddf5-4f0d-9799-be784640d7c7]] [partition-2]
+     * [leader=broker-87f2d83a-b58a-4b90-a441-7077b2713419,
+     * replicas=[broker-26fc73c5-38c2-476a-8a72-65516a91de26,
+     * broker-7a9af119-d0ba-4aed-8594-19f41b9fe13f]]
+     */
     private TopicInfo createTopicInEtcd(MetadataStorage metadata, CreateTopicCommand command) {
 
         List<LiveBroker> brokersSampling =
-                metadata.getSamplingOfLiveBrokers(command.partitionsCount() * REPLICATION_FACTOR);
+                metadata.getSamplingOfLiveBrokers(
+                        command.partitionsCount() * command.replicasCnt());
 
         List<TopicPartitionInfo> partitions = new ArrayList<>();
 
@@ -72,7 +84,7 @@ public final class CreateTopicCommandServerHandler extends ChannelInboundHandler
             partitions.add(
                     new TopicPartitionInfo(
                             partitionLeader.id(),
-                            createReplicas(samplingIt, REPLICATION_FACTOR - 1)));
+                            createReplicas(samplingIt, command.replicasCnt() - 1)));
         }
 
         System.out.printf("[%s] partitions = '%s'%n", brokerCtx.config().brokerName(), partitions);

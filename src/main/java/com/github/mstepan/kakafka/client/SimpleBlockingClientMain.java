@@ -26,6 +26,8 @@ public final class SimpleBlockingClientMain {
     private static final int NO_AVAILABLE_BROKERS_EXIT_CODE = 3;
     private static final int CANT_CONNECT_TO_LEADER_EXIT_CODE = 4;
 
+    private static final int CANT_CREATE_TOPIC_CODE = 5;
+
     // provide list of seed broker to connect to
     private static final List<BrokerHost> seedBrokers =
             List.of(
@@ -70,25 +72,25 @@ public final class SimpleBlockingClientMain {
                         DataOutputStream dataOut = new DataOutputStream(leader.getOutputStream())) {
 
                     final String topicName = "topic-a";
+                    final int partitionsCnt = 3;
+                    final int replicasCnt = 5;
 
-                    sendCommand(new CreateTopicCommand(topicName, 3), dataOut);
-                    CreateTopicCommandResponse response =
-                            (CreateTopicCommandResponse)
-                                    CommandResponseDecoder.decode(
-                                            DataIn.fromStandardStream(dataIn));
-                    if (response.status() == 200) {
-                        System.out.printf("Create topic '%s' success.%n", topicName);
+                    CreateTopicCommandResponse createTopicResponse =
+                            createTopic(topicName, partitionsCnt, replicasCnt, dataIn, dataOut);
 
-                        TopicInfo info = response.info();
-
-                        int parIdx = 0;
-                        for (TopicPartitionInfo partitionInfo : info.partitions()) {
-                            System.out.printf("[partition-%d]: %s%n", parIdx, partitionInfo);
-                            ++parIdx;
-                        }
-
-                    } else {
+                    if (createTopicResponse.status() != 200) {
                         System.err.printf("Create topic '%s' FAILED.%n", topicName);
+                        System.exit(CANT_CREATE_TOPIC_CODE);
+                    }
+
+                    System.out.printf("Create topic '%s' success.%n", topicName);
+
+                    TopicInfo info = createTopicResponse.info();
+
+                    int parIdx = 0;
+                    for (TopicPartitionInfo partitionInfo : info.partitions()) {
+                        System.out.printf("[partition-%d]: %s%n", parIdx, partitionInfo);
+                        ++parIdx;
                     }
                 }
 
@@ -98,6 +100,18 @@ public final class SimpleBlockingClientMain {
         } finally {
             closeSocket(socket);
         }
+    }
+
+    private CreateTopicCommandResponse createTopic(
+            String topicName,
+            int partitionsCnt,
+            int replicasCnt,
+            DataInputStream dataIn,
+            DataOutputStream dataOut)
+            throws IOException {
+        sendCommand(new CreateTopicCommand(topicName, partitionsCnt, replicasCnt), dataOut);
+        return (CreateTopicCommandResponse)
+                CommandResponseDecoder.decode(DataIn.fromStandardStream(dataIn));
     }
 
     private void sendCommand(Command command, DataOutputStream out) throws IOException {
