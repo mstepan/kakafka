@@ -124,10 +124,8 @@ public final class CreateTopicCommandServerHandler extends ChannelInboundHandler
                                         .formatted(command.topicName())));
             }
 
-            // todo: save normal TopicInfo here, not toString value
-            final ByteSequence topicValue = EtcdUtils.toByteSeq(topicInfo.toString());
-
-            kvClient.put(topicKey, topicValue).get();
+            // store 'TopicInfo' as binary encoded value
+            kvClient.put(topicKey, ByteSequence.from(topicInfo.toBytes())).get();
 
             return Either.ok(topicInfo);
         } catch (Exception ex) {

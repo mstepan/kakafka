@@ -20,4 +20,10 @@
 #
 # etcdctl get --prefix /kakafka/brokers/
 
+
+#
+# Get all topics
+#
+# etcdctl get --prefix /kakafka/topics/
+
 docker exec -it etcd-kakafka bash
