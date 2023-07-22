@@ -150,10 +150,10 @@ public final class SimpleBlockingClientMain {
     }
 
     private void printTopicInfo(TopicInfo info) {
-        int parIdx = 0;
+        System.out.printf("%nTOPIC INFO%n");
+        System.out.printf("topic: %s%n", info.topicName());
         for (TopicPartitionInfo partitionInfo : info.partitions()) {
-            System.out.printf("[partition-%d]: %s%n", parIdx, partitionInfo);
-            ++parIdx;
+            System.out.printf("[partition-%d]: %s%n", partitionInfo.idx(), partitionInfo);
         }
     }
 
