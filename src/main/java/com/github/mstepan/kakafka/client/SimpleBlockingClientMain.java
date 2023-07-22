@@ -20,6 +20,8 @@ import java.net.Socket;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
+import java.util.Timer;
+import java.util.concurrent.TimeUnit;
 
 public final class SimpleBlockingClientMain {
 
@@ -38,9 +40,10 @@ public final class SimpleBlockingClientMain {
                     new BrokerHost("localhost", 9095));
 
     public static void main(String[] args) throws Exception {
-        //                for (int i = 0; i < 1000; ++i) {
-        new SimpleBlockingClientMain().run();
-        //                }
+        for (int i = 0; i < 1_000_000; ++i) {
+            new SimpleBlockingClientMain().run();
+            TimeUnit.SECONDS.sleep(1L);
+        }
     }
 
     public void run() throws IOException {

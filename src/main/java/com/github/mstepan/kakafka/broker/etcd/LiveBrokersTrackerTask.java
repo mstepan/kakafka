@@ -69,6 +69,7 @@ public class LiveBrokersTrackerTask implements Runnable {
 
     private void fetchLiveBrokersFromEtcd() {
         try {
+            @SuppressWarnings("resource")
             final KV kvClient = brokerCtx.etcdClientHolder().kvClient();
 
             GetResponse getResp =
@@ -108,6 +109,7 @@ public class LiveBrokersTrackerTask implements Runnable {
 
     private void watchForChanges() {
 
+        @SuppressWarnings("resource")
         Watch watchClient = brokerCtx.etcdClientHolder().watchClient();
 
         watchClient.watch(
