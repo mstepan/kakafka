@@ -7,7 +7,6 @@ import com.github.mstepan.kakafka.command.Command;
 import com.github.mstepan.kakafka.command.CommandEncoder;
 import com.github.mstepan.kakafka.command.CreateTopicCommand;
 import com.github.mstepan.kakafka.command.GetMetadataCommand;
-import com.github.mstepan.kakafka.command.response.CommandResponse;
 import com.github.mstepan.kakafka.command.response.CommandResponseDecoder;
 import com.github.mstepan.kakafka.command.response.CreateTopicCommandResponse;
 import com.github.mstepan.kakafka.command.response.MetadataCommandResponse;
@@ -25,9 +24,11 @@ import java.util.UUID;
 public final class SimpleBlockingClientMain {
 
     private static final int NO_AVAILABLE_BROKERS_EXIT_CODE = 3;
-    private static final int CANT_CONNECT_TO_LEADER_EXIT_CODE = 4;
 
-    private static final int CANT_CREATE_TOPIC_CODE = 5;
+    private static final int CANT_CONNECT_TO_LEADER_EXIT_CODE = 4;
+    private static final int GET_METADATA_FAILED_EXIT_CODE = 5;
+
+    private static final int CANT_CREATE_TOPIC_CODE = 6;
 
     // provide list of seed broker to connect to
     private static final List<BrokerHost> seedBrokers =
@@ -72,7 +73,8 @@ public final class SimpleBlockingClientMain {
 
         try (Socket socket = findAvailableBroker()) {
 
-            MetadataState metaState = getMetadata(socket);
+            final MetadataCommandResponse metaResponse = getMetadata(socket);
+            final MetadataState metaState = metaResponse.state();
             printMetadata(metaState);
 
             try (Socket leader =
@@ -87,13 +89,12 @@ public final class SimpleBlockingClientMain {
                 System.out.println("Successfully connected to LEADER broker");
 
                 TopicInfo info = createTopic(leader);
-
                 printTopicInfo(info);
             }
         }
     }
 
-    private MetadataState getMetadata(Socket socket) throws IOException {
+    private MetadataCommandResponse getMetadata(Socket socket) throws IOException {
         try (DataOutputStream dataOut = new DataOutputStream(socket.getOutputStream());
                 DataInputStream dataIn = new DataInputStream(socket.getInputStream())) {
 
@@ -101,18 +102,15 @@ public final class SimpleBlockingClientMain {
 
             sendCommand(new GetMetadataCommand(), dataOut);
 
-            CommandResponse response = CommandResponseDecoder.decode(in);
+            MetadataCommandResponse metaCommandResp =
+                    (MetadataCommandResponse) CommandResponseDecoder.decode(in);
 
-            if (response instanceof MetadataCommandResponse metaCommandResp) {
-
-                if (metaCommandResp.statusCode() == 200) {
-                    return metaCommandResp.state();
-                } else {
-                    throw new IllegalStateException("Get Metadata failed");
-                }
-            } else {
-                throw new IllegalStateException("Can't obtain metadata from broker.");
+            if (metaCommandResp.statusCode() != 200) {
+                System.err.println("Get Metadata request failed");
+                System.exit(GET_METADATA_FAILED_EXIT_CODE);
             }
+
+            return metaCommandResp;
         }
     }
 
@@ -187,6 +185,4 @@ public final class SimpleBlockingClientMain {
             return null;
         }
     }
-
-
 }
