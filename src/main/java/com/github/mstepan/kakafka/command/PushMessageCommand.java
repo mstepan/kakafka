@@ -5,7 +5,8 @@ import com.github.mstepan.kakafka.io.DataIn;
 import com.github.mstepan.kakafka.io.DataOut;
 import java.util.Objects;
 
-public record PushMessageCommand(StringTopicMessage msg) implements Command {
+public record PushMessageCommand(String topicName, int partitionsIdx, StringTopicMessage msg)
+        implements Command {
 
     public PushMessageCommand {
         Objects.requireNonNull(msg, "null 'msg' detected");
@@ -22,17 +23,27 @@ public record PushMessageCommand(StringTopicMessage msg) implements Command {
     @Override
     public void encode(DataOut out) {
         out.writeInt(CommandMarker.PUSH_MESSAGE.value());
+        out.writeString(topicName);
+        out.writeInt(partitionsIdx);
         out.writeString(getMsgKey());
         out.writeString(getMsgValue());
     }
 
     public static PushMessageCommand decode(DataIn in) {
+
+        // read 'topicName' as string
+        String topicName = in.readString();
+
+        // read 'partitionIdx' as int
+        int partitionIdx = in.readInt();
+
         // read 'message.key' string
         String messageKey = in.readString();
 
         // read 'message.value' string
         String messageValue = in.readString();
 
-        return new PushMessageCommand(new StringTopicMessage(messageKey, messageValue));
+        return new PushMessageCommand(
+                topicName, partitionIdx, new StringTopicMessage(messageKey, messageValue));
     }
 }

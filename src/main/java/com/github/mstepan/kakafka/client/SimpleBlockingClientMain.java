@@ -94,44 +94,10 @@ public final class SimpleBlockingClientMain {
                 TopicInfo info = createTopic(leader);
                 printTopicInfo(info);
 
-                pushMessage(info, metaState, new StringTopicMessage("key-123", "hello world!!!"));
+                pushMessage(info, metaState, new StringTopicMessage("some-key-value-123345466", "hello world!!!"));
             }
         } catch (IOException ioEx) {
             ioEx.printStackTrace();
-        }
-    }
-
-    private void pushMessage(
-            TopicInfo info, MetadataState metaState, StringTopicMessage stringTopicMessage)
-            throws IOException {
-
-        List<TopicPartitionInfo> partitions = info.partitions();
-
-        int partitionIdx = Math.abs(stringTopicMessage.key().hashCode()) % partitions.size();
-
-        TopicPartitionInfo partitionToPushMessage = partitions.get(partitionIdx);
-
-        Optional<LiveBroker> maybeBroker =
-                metaState.findBrokerById(partitionToPushMessage.leader());
-
-        if (maybeBroker.isEmpty()) {
-            System.exit(CANT_FIND_TOPIC_PARTITION_LEADER_EXIT_CODE);
-        }
-
-        BrokerHost brokerHost = maybeBroker.map(BrokerHost::fromLiveBroker).get();
-
-        try (Socket brokerToPush = connect(brokerHost);
-                DataInputStream dataIn = new DataInputStream(brokerToPush.getInputStream());
-                DataOutputStream dataOut = new DataOutputStream(brokerToPush.getOutputStream())) {
-
-            DataIn in = DataIn.fromStandardStream(dataIn);
-
-            System.out.printf("Pushing message to broker: %s%n", brokerHost);
-
-            sendCommand(new PushMessageCommand(stringTopicMessage), dataOut);
-
-            PushMessageCommandResponse pushResp =
-                    (PushMessageCommandResponse) CommandResponseDecoder.decode(in);
         }
     }
 
@@ -188,6 +154,43 @@ public final class SimpleBlockingClientMain {
         for (TopicPartitionInfo partitionInfo : info.partitions()) {
             System.out.printf("[partition-%d]: %s%n", parIdx, partitionInfo);
             ++parIdx;
+        }
+    }
+
+    private void pushMessage(
+            TopicInfo info, MetadataState metaState, StringTopicMessage stringTopicMessage)
+            throws IOException {
+
+        List<TopicPartitionInfo> partitions = info.partitions();
+
+        int partitionIdx = Math.abs(stringTopicMessage.key().hashCode()) % partitions.size();
+
+        TopicPartitionInfo partitionToPushMessage = partitions.get(partitionIdx);
+
+        Optional<LiveBroker> maybeBroker =
+                metaState.findBrokerById(partitionToPushMessage.leader());
+
+        if (maybeBroker.isEmpty()) {
+            System.exit(CANT_FIND_TOPIC_PARTITION_LEADER_EXIT_CODE);
+        }
+
+        BrokerHost brokerHost = maybeBroker.map(BrokerHost::fromLiveBroker).get();
+
+        try (Socket brokerToPush = connect(brokerHost);
+             DataInputStream dataIn = new DataInputStream(brokerToPush.getInputStream());
+             DataOutputStream dataOut = new DataOutputStream(brokerToPush.getOutputStream())) {
+
+            DataIn in = DataIn.fromStandardStream(dataIn);
+
+            System.out.printf("Pushing message to broker: %s%n", brokerHost);
+
+            sendCommand(
+                    new PushMessageCommand(
+                            info.topicName(), partitionToPushMessage.idx(), stringTopicMessage),
+                    dataOut);
+
+            PushMessageCommandResponse pushResp =
+                    (PushMessageCommandResponse) CommandResponseDecoder.decode(in);
         }
     }
 

@@ -1,5 +1,6 @@
 package com.github.mstepan.kakafka.broker.handlers;
 
+import com.github.mstepan.kakafka.broker.wal.LogStorage;
 import com.github.mstepan.kakafka.command.Command;
 import com.github.mstepan.kakafka.command.PushMessageCommand;
 import com.github.mstepan.kakafka.command.response.PushMessageCommandResponse;
@@ -11,8 +12,11 @@ public final class PushMessageServerHandler extends ChannelInboundHandlerAdapter
 
     private final String brokerName;
 
-    public PushMessageServerHandler(String brokerName) {
+    private final LogStorage logStorage;
+
+    public PushMessageServerHandler(String brokerName, LogStorage logStorage) {
         this.brokerName = brokerName;
+        this.logStorage = logStorage;
     }
 
     @Override
@@ -22,11 +26,18 @@ public final class PushMessageServerHandler extends ChannelInboundHandlerAdapter
         if (command instanceof PushMessageCommand pushCommand) {
             try {
                 System.out.printf(
-                        "[%s] 'pushMessage' received with key = '%s' and value = '%s'%n",
-                        brokerName, pushCommand.getMsgKey(), pushCommand.getMsgValue());
+                        "[%s] 'pushMessage' topic '%s', partition idx '%d', (key = '%s', value = '%s')%n",
+                        brokerName,
+                        pushCommand.topicName(),
+                        pushCommand.partitionsIdx(),
+                        pushCommand.getMsgKey(),
+                        pushCommand.getMsgValue());
 
                 // TODO: write to local broker FS
                 // TODO: append message to end of write-ahead log (WAL)
+
+                logStorage.appendMessage(
+                        pushCommand.topicName(), pushCommand.partitionsIdx(), pushCommand.msg());
 
                 ctx.writeAndFlush(new PushMessageCommandResponse(200));
             } finally {

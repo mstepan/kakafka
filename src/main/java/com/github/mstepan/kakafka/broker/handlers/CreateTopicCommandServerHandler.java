@@ -96,6 +96,7 @@ public final class CreateTopicCommandServerHandler extends ChannelInboundHandler
 
                 partitions.add(
                         new TopicPartitionInfo(
+                                parId,
                                 partitionLeader.id(),
                                 createReplicas(samplingIt, command.replicasCnt() - 1)));
             }
@@ -103,7 +104,7 @@ public final class CreateTopicCommandServerHandler extends ChannelInboundHandler
             System.out.printf(
                     "[%s] partitions = '%s'%n", brokerCtx.config().brokerName(), partitions);
 
-            TopicInfo topicInfo = new TopicInfo(partitions);
+            TopicInfo topicInfo = new TopicInfo(command.topicName(), partitions);
 
             @SuppressWarnings("resource")
             KV kvClient = brokerCtx.etcdClientHolder().kvClient();

@@ -22,10 +22,16 @@ public record CreateTopicCommandResponse(TopicInfo info, int status) implements 
             return;
         }
 
+        // | topicName, string |
+        out.writeString(info.topicName());
+
         // | partitions size, int |
         out.writeInt(info().partitions().size());
 
         for (TopicPartitionInfo partitionInfo : info.partitions()) {
+
+            // | partition idx, int |
+            out.writeInt(partitionInfo.idx());
 
             // | partition leader id, string |
             out.writeString(partitionInfo.leader());
@@ -53,12 +59,18 @@ public record CreateTopicCommandResponse(TopicInfo info, int status) implements 
             return new CreateTopicCommandResponse(null, statusCode);
         }
 
+        // | topicName, string |
+        String topicName = in.readString();
+
         // | partitions size, int |
         int partitionsCount = in.readInt();
 
         List<TopicPartitionInfo> partitions = new ArrayList<>();
 
-        for (int parId = 0; parId < partitionsCount; ++parId) {
+        for (int i = 0; i < partitionsCount; ++i) {
+
+            // | partition idx, int |
+            int partitionIdx = in.readInt();
 
             // | partition leader id string |
             String leader = in.readString();
@@ -75,9 +87,9 @@ public record CreateTopicCommandResponse(TopicInfo info, int status) implements 
 
                 replicas.add(singleReplicaId);
             }
-            partitions.add(new TopicPartitionInfo(leader, replicas));
+            partitions.add(new TopicPartitionInfo(partitionIdx, leader, replicas));
         }
 
-        return new CreateTopicCommandResponse(new TopicInfo(partitions), statusCode);
+        return new CreateTopicCommandResponse(new TopicInfo(topicName, partitions), statusCode);
     }
 }

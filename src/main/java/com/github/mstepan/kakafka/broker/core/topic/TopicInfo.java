@@ -12,7 +12,7 @@ import java.util.Objects;
 import java.util.zip.GZIPInputStream;
 import java.util.zip.GZIPOutputStream;
 
-public record TopicInfo(List<TopicPartitionInfo> partitions) {
+public record TopicInfo(String topicName, List<TopicPartitionInfo> partitions) {
 
     public TopicInfo {
         Objects.requireNonNull(partitions, "null 'partitions' detected");
@@ -23,6 +23,8 @@ public record TopicInfo(List<TopicPartitionInfo> partitions) {
         try (ByteArrayInputStream byteArrayIn = new ByteArrayInputStream(bytes);
                 GZIPInputStream compressedIn = new GZIPInputStream(byteArrayIn);
                 DataInputStream in = new DataInputStream(compressedIn)) {
+
+            final String topicName = in.readUTF();
 
             final int partitionsCount = in.readInt();
 
@@ -37,10 +39,10 @@ public record TopicInfo(List<TopicPartitionInfo> partitions) {
                     replicas.add(in.readUTF());
                 }
 
-                partitions.add(new TopicPartitionInfo(leader, replicas));
+                partitions.add(new TopicPartitionInfo(parIdx, leader, replicas));
             }
 
-            return new TopicInfo(partitions);
+            return new TopicInfo(topicName, partitions);
 
         } catch (IOException ioEx) {
             // We should never have 'IOException' here b/c we are using 'DataOutputStream' that is
@@ -60,6 +62,8 @@ public record TopicInfo(List<TopicPartitionInfo> partitions) {
 
         try (GZIPOutputStream compressedOut = new GZIPOutputStream(byteArrayOut);
                 DataOutputStream out = new DataOutputStream(compressedOut)) {
+
+            out.writeUTF(topicName);
 
             out.writeInt(partitions().size());
 

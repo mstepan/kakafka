@@ -10,6 +10,7 @@ import com.github.mstepan.kakafka.broker.handlers.ExitCommandServerHandler;
 import com.github.mstepan.kakafka.broker.handlers.GetMetadataCommandServerHandler;
 import com.github.mstepan.kakafka.broker.handlers.PushMessageServerHandler;
 import com.github.mstepan.kakafka.broker.utils.DaemonThreadFactory;
+import com.github.mstepan.kakafka.broker.wal.LogStorage;
 import com.github.mstepan.kakafka.command.CommandDecoder;
 import com.github.mstepan.kakafka.command.response.CommandResponseEncoder;
 import io.etcd.jetcd.Client;
@@ -57,9 +58,11 @@ public final class BrokerMain {
     public static void main(String[] args) throws Exception {
         final BrokerNameFactory nameFac = new BrokerNameFactory();
         final BrokerConfig config =
-                new BrokerConfig(nameFac.generateBrokerName(), getPort(), "http://localhost:2379");
-
-        final MetadataStorage metadata = new MetadataStorage();
+                new BrokerConfig(
+                        nameFac.generateBrokerName(), getPort(), "http://localhost:2379", "./data");
+        final MetadataStorage metadataStorage = new MetadataStorage();
+        final LogStorage logStorage = new LogStorage(config);
+        logStorage.init();
 
         // jetcd 'Client' and all client classes, like `KV` are thread safe,
         // so we can use one instance per broker.
@@ -72,7 +75,8 @@ public final class BrokerMain {
             EtcdClientHolder etcdClientHolder =
                     new EtcdClientHolder(leaseClient, electionClient, kvClient, watchClient);
 
-            BrokerContext brokerContext = new BrokerContext(config, metadata, etcdClientHolder);
+            BrokerContext brokerContext =
+                    new BrokerContext(config, metadataStorage, etcdClientHolder, logStorage);
 
             new BrokerMain(brokerContext).run(getPort());
         }
@@ -146,7 +150,8 @@ public final class BrokerMain {
                                             IO_BLOCKING_FILE_SYSTEM_CALLS_GROUP,
                                             "pushMessageHandler",
                                             new PushMessageServerHandler(
-                                                    brokerCtx.config().brokerName()));
+                                                    brokerCtx.config().brokerName(),
+                                                    brokerCtx.logStorage()));
 
                                     pipeline.addLast(
                                             IO_BLOCKING_ETC_CALLS_GROUP,
