@@ -46,9 +46,13 @@ public final class BrokerMain {
      * 'jetcd' client.
      * https://stackoverflow.com/questions/49133447/how-can-you-safely-perform-blocking-operations-in-a-netty-channel-handler
      */
-    private static final EventExecutorGroup IO_BLOCKING_OPERATIONS_GROUP =
+    private static final EventExecutorGroup IO_BLOCKING_ETC_CALLS_GROUP =
             new DefaultEventExecutorGroup(
-                    64, new DaemonThreadFactory("netty-io-blocking-operations-group"));
+                    8, new DaemonThreadFactory("netty-io-blocking-etcd-calls-group"));
+
+    private static final EventExecutorGroup IO_BLOCKING_FILE_SYSTEM_CALLS_GROUP =
+            new DefaultEventExecutorGroup(
+                    8, new DaemonThreadFactory("netty-io-blocking-file-system-calls-group"));
 
     public static void main(String[] args) throws Exception {
         final BrokerNameFactory nameFac = new BrokerNameFactory();
@@ -139,12 +143,13 @@ public final class BrokerMain {
                                                     brokerCtx.metadata()));
 
                                     pipeline.addLast(
+                                            IO_BLOCKING_FILE_SYSTEM_CALLS_GROUP,
                                             "pushMessageHandler",
                                             new PushMessageServerHandler(
                                                     brokerCtx.config().brokerName()));
 
                                     pipeline.addLast(
-                                            IO_BLOCKING_OPERATIONS_GROUP,
+                                            IO_BLOCKING_ETC_CALLS_GROUP,
                                             "createTopicHandler",
                                             new CreateTopicCommandServerHandler(brokerCtx));
                                 }

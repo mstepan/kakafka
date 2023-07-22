@@ -25,6 +25,9 @@ public final class PushMessageServerHandler extends ChannelInboundHandlerAdapter
                         "[%s] 'pushMessage' received with key = '%s' and value = '%s'%n",
                         brokerName, pushCommand.getMsgKey(), pushCommand.getMsgValue());
 
+                // TODO: write to local broker FS
+                // TODO: append message to end of write-ahead log (WAL)
+
                 ctx.writeAndFlush(new PushMessageCommandResponse(200));
             } finally {
                 ReferenceCountUtil.release(msg);

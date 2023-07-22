@@ -76,7 +76,7 @@ public final class SimpleBlockingClientMain {
         }
     }
 
-    public void run() throws IOException {
+    public void run() {
 
         try (Socket socket = findAvailableBroker()) {
 
