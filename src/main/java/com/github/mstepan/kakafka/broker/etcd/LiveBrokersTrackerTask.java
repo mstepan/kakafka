@@ -112,6 +112,10 @@ public class LiveBrokersTrackerTask implements Runnable {
         @SuppressWarnings("resource")
         Watch watchClient = brokerCtx.etcdClientHolder().watchClient();
 
+        //
+        // Start watching for ACTIVE brokers.
+        // Event will be received inside 'vert.x-eventloop-thread-0' thread.
+        //
         watchClient.watch(
                 BROKER_KEY_PREFIX,
                 WatchOption.newBuilder().isPrefix(true).withRevision(0L).build(),
@@ -121,7 +125,6 @@ public class LiveBrokersTrackerTask implements Runnable {
                         List<WatchEvent> events = watchResponse.getEvents();
 
                         for (WatchEvent singleEvent : events) {
-
                             if (singleEvent.getEventType() == WatchEvent.EventType.UNRECOGNIZED) {
                                 System.err.println("UNRECOGNIZED event");
                             } else {

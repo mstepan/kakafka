@@ -109,11 +109,18 @@ public final class KeepAliveAndLeaderElectionTask implements Runnable {
         }
     }
 
+    // Listener to track changes in LEADER. As soon as new LEADER will be elected,
+    // the listener will receive notification. All notifications will be executed inside
+    // 'vert.x-eventloop-thread-0' thread.
     private record LeaderElectionListener(String brokerName, MetadataStorage metadata)
             implements Election.Listener {
 
         @Override
         public void onNext(LeaderResponse leaderResponse) {
+
+            System.out.printf(
+                    "[%s] Leader notification received in thread: '%s'%n",
+                    brokerName, Thread.currentThread().getName());
 
             KeyValue leaderKeyAndValue = leaderResponse.getKv();
 
