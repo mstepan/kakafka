@@ -18,6 +18,10 @@ public record CreateTopicCommandResponse(TopicInfo info, int status) implements 
         // | status, int |
         out.writeInt(status);
 
+        if (status == 500) {
+            return;
+        }
+
         // | partitions size, int |
         out.writeInt(info().partitions().size());
 
@@ -44,6 +48,10 @@ public record CreateTopicCommandResponse(TopicInfo info, int status) implements 
 
         // | status, int |
         int statusCode = in.readInt();
+
+        if (statusCode == 500) {
+            return new CreateTopicCommandResponse(null, statusCode);
+        }
 
         // | partitions size, int |
         int partitionsCount = in.readInt();

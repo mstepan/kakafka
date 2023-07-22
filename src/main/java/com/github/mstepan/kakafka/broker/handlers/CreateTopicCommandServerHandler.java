@@ -1,6 +1,7 @@
 package com.github.mstepan.kakafka.broker.handlers;
 
 import com.github.mstepan.kakafka.broker.BrokerContext;
+import com.github.mstepan.kakafka.broker.core.Either;
 import com.github.mstepan.kakafka.broker.core.LiveBroker;
 import com.github.mstepan.kakafka.broker.core.MetadataStorage;
 import com.github.mstepan.kakafka.broker.core.topic.TopicInfo;
@@ -11,6 +12,7 @@ import com.github.mstepan.kakafka.command.CreateTopicCommand;
 import com.github.mstepan.kakafka.command.response.CreateTopicCommandResponse;
 import io.etcd.jetcd.ByteSequence;
 import io.etcd.jetcd.KV;
+import io.etcd.jetcd.kv.GetResponse;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelInboundHandlerAdapter;
 import java.util.ArrayList;
@@ -45,12 +47,15 @@ public final class CreateTopicCommandServerHandler extends ChannelInboundHandler
             // so it will be executed in separate 'EventExecutorGroup' called
             // 'BrokerMain.IO_BLOCKING_OPERATIONS_GROUP'
             //
-            TopicInfo topicInfo = createTopicInEtcd(brokerCtx.metadata(), createTopicCommand);
+            Either<TopicInfo> maybeTopicInfo =
+                    createTopicInEtcd(brokerCtx.metadata(), createTopicCommand);
 
-            ctx.writeAndFlush(new CreateTopicCommandResponse(topicInfo, 200));
-
-            System.out.printf("[%s] broker ready to handle other requests%n", brokerName);
-
+            if (maybeTopicInfo.isOk()) {
+                ctx.writeAndFlush(new CreateTopicCommandResponse(maybeTopicInfo.value(), 200));
+            } else {
+                maybeTopicInfo.exception().printStackTrace();
+                ctx.writeAndFlush(new CreateTopicCommandResponse(null, 500));
+            }
         } else {
             ctx.fireChannelRead(msg);
         }
@@ -75,8 +80,8 @@ public final class CreateTopicCommandServerHandler extends ChannelInboundHandler
      * replicas=[broker-26fc73c5-38c2-476a-8a72-65516a91de26,
      * broker-7a9af119-d0ba-4aed-8594-19f41b9fe13f]]
      */
-    private TopicInfo createTopicInEtcd(MetadataStorage metadata, CreateTopicCommand command) {
-
+    private Either<TopicInfo> createTopicInEtcd(
+            MetadataStorage metadata, CreateTopicCommand command) {
         try {
             List<LiveBroker> brokersSampling =
                     metadata.getSamplingOfLiveBrokers(
@@ -106,18 +111,27 @@ public final class CreateTopicCommandServerHandler extends ChannelInboundHandler
             final ByteSequence topicKey =
                     EtcdUtils.toByteSeq("/kakafka/topics/%s".formatted(command.topicName()));
 
-            // todo: check if topic key already exists, if not create one, otherwise
-            // fail
+            //
+            // Check if the topic with the same name already exists.
+            // If there is a corresponding 'etcd' key, we just throw an exception.
+            //
+            GetResponse topicGetResponse = kvClient.get(topicKey).get();
+
+            if (topicGetResponse.getCount() != 0L) {
+                return Either.error(
+                        new IllegalStateException(
+                                "Topic with the name '%s' already exists"
+                                        .formatted(command.topicName())));
+            }
 
             // todo: save normal TopicInfo here, not toString value
             final ByteSequence topicValue = EtcdUtils.toByteSeq(topicInfo.toString());
 
             kvClient.put(topicKey, topicValue).get();
 
-            return topicInfo;
+            return Either.ok(topicInfo);
         } catch (Exception ex) {
-            ex.printStackTrace();
-            throw new IllegalStateException(ex);
+            return Either.error(ex);
         }
     }
 

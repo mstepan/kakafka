@@ -20,6 +20,7 @@ import java.net.Socket;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
+import java.util.UUID;
 
 public final class SimpleBlockingClientMain {
 
@@ -39,8 +40,8 @@ public final class SimpleBlockingClientMain {
 
     public static void main(String[] args) throws Exception {
 
-        final int iterationsCount = 1;
-        final int clientsCount = 1;
+        final int iterationsCount = 100;
+        final int clientsCount = 100;
         final Thread[] clients = new Thread[clientsCount];
 
         for (int i = 0; i < clients.length; ++i) {
@@ -95,7 +96,7 @@ public final class SimpleBlockingClientMain {
                 try (DataInputStream dataIn = new DataInputStream(leader.getInputStream());
                         DataOutputStream dataOut = new DataOutputStream(leader.getOutputStream())) {
 
-                    final String topicName = "topic-a";
+                    final String topicName = "topic-" + UUID.randomUUID();
                     final int partitionsCnt = 3;
                     final int replicasCnt = 3;
 
