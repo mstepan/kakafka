@@ -6,6 +6,7 @@ import java.io.IOException;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Objects;
+import java.util.zip.DeflaterOutputStream;
 
 public record TopicInfo(List<TopicPartitionInfo> partitions) {
 
@@ -15,14 +16,13 @@ public record TopicInfo(List<TopicPartitionInfo> partitions) {
 
     /**
      * Convert TopicInfo to byte[] array. This code will be used to convert TopicInfo into 'etcd'
-     * value.
+     * value. Make sense also compress data with Deflate.
      */
     public byte[] toBytes() {
+        try (ByteArrayOutputStream byteArrayOut = new ByteArrayOutputStream();
+                DeflaterOutputStream compressedOut = new DeflaterOutputStream(byteArrayOut);
+                DataOutputStream out = new DataOutputStream(compressedOut)) {
 
-        ByteArrayOutputStream byteArrayOut = new ByteArrayOutputStream();
-        DataOutputStream out = new DataOutputStream(byteArrayOut);
-
-        try {
             out.writeInt(partitions().size());
 
             Iterator<TopicPartitionInfo> partitionInfoIt = partitions().iterator();
@@ -37,12 +37,14 @@ public record TopicInfo(List<TopicPartitionInfo> partitions) {
                     out.writeBytes(singleReplicaValue);
                 }
             }
+
+            out.flush();
+            return byteArrayOut.toByteArray();
+
         } catch (IOException ioEx) {
             // We should never have 'IOException' here b/c we are using 'DataOutputStream' that is
             // just in-memory byte[] array value.
             throw new IllegalStateException(ioEx);
         }
-
-        return byteArrayOut.toByteArray();
     }
 }
