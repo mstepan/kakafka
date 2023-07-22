@@ -70,78 +70,27 @@ public final class SimpleBlockingClientMain {
 
     public void run() throws IOException {
 
-        Socket socket = findAvailableBroker();
+        try (Socket socket = findAvailableBroker()) {
 
-        if (socket == null) {
-            System.err.println("All brokers are DOWN!!!");
-            System.exit(NO_AVAILABLE_BROKERS_EXIT_CODE);
-        }
-        try {
             MetadataState metaState = getMetadata(socket);
-            System.out.println(metaState.asStr());
+            printMetadata(metaState);
 
-            Socket leader =
+            try (Socket leader =
                     connect(
                             new BrokerHost(
                                     metaState.leaderBroker().host(),
-                                    metaState.leaderBroker().port()));
-
-            try {
+                                    metaState.leaderBroker().port()))) {
                 if (leader == null) {
                     System.exit(CANT_CONNECT_TO_LEADER_EXIT_CODE);
                 }
 
                 System.out.println("Successfully connected to LEADER broker");
 
-                try (DataInputStream dataIn = new DataInputStream(leader.getInputStream());
-                        DataOutputStream dataOut = new DataOutputStream(leader.getOutputStream())) {
+                TopicInfo info = createTopic(leader);
 
-                    final String topicName = "topic-" + UUID.randomUUID();
-                    final int partitionsCnt = 3;
-                    final int replicasCnt = 3;
-
-                    CreateTopicCommandResponse createTopicResponse =
-                            createTopic(topicName, partitionsCnt, replicasCnt, dataIn, dataOut);
-
-                    if (createTopicResponse.status() != 200) {
-                        System.err.printf("Create topic '%s' FAILED.%n", topicName);
-                        System.exit(CANT_CREATE_TOPIC_CODE);
-                    }
-
-                    System.out.printf("Create topic '%s' success.%n", topicName);
-
-                    TopicInfo info = createTopicResponse.info();
-
-                    int parIdx = 0;
-                    for (TopicPartitionInfo partitionInfo : info.partitions()) {
-                        System.out.printf("[partition-%d]: %s%n", parIdx, partitionInfo);
-                        ++parIdx;
-                    }
-                }
-
-            } finally {
-                closeSocket(leader);
+                printTopicInfo(info);
             }
-        } finally {
-            closeSocket(socket);
         }
-    }
-
-    private CreateTopicCommandResponse createTopic(
-            String topicName,
-            int partitionsCnt,
-            int replicasCnt,
-            DataInputStream dataIn,
-            DataOutputStream dataOut)
-            throws IOException {
-        sendCommand(new CreateTopicCommand(topicName, partitionsCnt, replicasCnt), dataOut);
-        return (CreateTopicCommandResponse)
-                CommandResponseDecoder.decode(DataIn.fromStandardStream(dataIn));
-    }
-
-    private void sendCommand(Command command, DataOutputStream out) throws IOException {
-        CommandEncoder.encode(DataOut.fromStandardStream(out), command);
-        out.flush();
     }
 
     private MetadataState getMetadata(Socket socket) throws IOException {
@@ -167,6 +116,47 @@ public final class SimpleBlockingClientMain {
         }
     }
 
+    private void printMetadata(MetadataState metaState) {
+        System.out.println(metaState.asStr());
+    }
+
+    private TopicInfo createTopic(Socket leader) throws IOException {
+        try (DataInputStream dataIn = new DataInputStream(leader.getInputStream());
+                DataOutputStream dataOut = new DataOutputStream(leader.getOutputStream())) {
+
+            final String topicName = "topic-" + UUID.randomUUID();
+            final int partitionsCnt = 3;
+            final int replicasCnt = 3;
+
+            sendCommand(new CreateTopicCommand(topicName, partitionsCnt, replicasCnt), dataOut);
+            CreateTopicCommandResponse createTopicResponse =
+                    (CreateTopicCommandResponse)
+                            CommandResponseDecoder.decode(DataIn.fromStandardStream(dataIn));
+
+            if (createTopicResponse.status() != 200) {
+                System.err.printf("Create topic '%s' FAILED.%n", topicName);
+                System.exit(CANT_CREATE_TOPIC_CODE);
+            }
+
+            System.out.printf("Create topic '%s' success.%n", topicName);
+
+            return createTopicResponse.info();
+        }
+    }
+
+    private void printTopicInfo(TopicInfo info) {
+        int parIdx = 0;
+        for (TopicPartitionInfo partitionInfo : info.partitions()) {
+            System.out.printf("[partition-%d]: %s%n", parIdx, partitionInfo);
+            ++parIdx;
+        }
+    }
+
+    private void sendCommand(Command command, DataOutputStream out) throws IOException {
+        CommandEncoder.encode(DataOut.fromStandardStream(out), command);
+        out.flush();
+    }
+
     private Socket findAvailableBroker() {
         List<BrokerHost> randomOrderedSeedBrokers = new ArrayList<>(seedBrokers);
         Collections.shuffle(randomOrderedSeedBrokers);
@@ -183,7 +173,9 @@ public final class SimpleBlockingClientMain {
             }
         }
 
-        return null;
+        System.err.println("All brokers are DOWN!!!");
+        System.exit(NO_AVAILABLE_BROKERS_EXIT_CODE);
+        throw new IllegalStateException("This line should not be reachable");
     }
 
     private Socket connect(BrokerHost broker) {
@@ -196,13 +188,5 @@ public final class SimpleBlockingClientMain {
         }
     }
 
-    private void closeSocket(Socket socket) {
-        if (socket != null) {
-            try {
-                socket.close();
-            } catch (IOException ioEx) {
-                throw new IllegalStateException("Can't properly close the Socket", ioEx);
-            }
-        }
-    }
+
 }

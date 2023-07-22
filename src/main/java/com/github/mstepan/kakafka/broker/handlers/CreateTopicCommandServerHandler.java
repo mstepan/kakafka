@@ -12,7 +12,6 @@ import com.github.mstepan.kakafka.command.CreateTopicCommand;
 import com.github.mstepan.kakafka.command.response.CreateTopicCommandResponse;
 import io.etcd.jetcd.ByteSequence;
 import io.etcd.jetcd.KV;
-import io.etcd.jetcd.KeyValue;
 import io.etcd.jetcd.kv.GetResponse;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelInboundHandlerAdapter;
