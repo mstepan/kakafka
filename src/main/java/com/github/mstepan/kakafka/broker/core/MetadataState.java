@@ -1,6 +1,8 @@
 package com.github.mstepan.kakafka.broker.core;
 
 import java.util.Collection;
+import java.util.Objects;
+import java.util.Optional;
 
 public record MetadataState(String leaderBrokerName, Collection<LiveBroker> brokers) {
 
@@ -28,5 +30,15 @@ public record MetadataState(String leaderBrokerName, Collection<LiveBroker> brok
         }
 
         return res.toString();
+    }
+
+    public Optional<LiveBroker> findBrokerById(String brokerIdToFind) {
+        Objects.requireNonNull(brokerIdToFind);
+        for (LiveBroker broker : brokers) {
+            if (brokerIdToFind.equals(broker.id())) {
+                return Optional.of(broker);
+            }
+        }
+        return Optional.empty();
     }
 }

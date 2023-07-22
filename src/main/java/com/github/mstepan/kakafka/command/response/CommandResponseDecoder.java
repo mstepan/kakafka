@@ -26,6 +26,7 @@ public final class CommandResponseDecoder extends ReplayingDecoder<Void> {
                 case GET_METADATA -> MetadataCommandResponse.decode(in);
                 case EXIT -> ExitCommandResponse.decode(in);
                 case CREATE_TOPIC -> CreateTopicCommandResponse.decode(in);
+                case PUSH_MESSAGE -> PushMessageCommandResponse.decode(in);
             };
 
         } catch (Exception ex) {

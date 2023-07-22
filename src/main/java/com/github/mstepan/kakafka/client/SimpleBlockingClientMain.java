@@ -1,15 +1,19 @@
 package com.github.mstepan.kakafka.client;
 
+import com.github.mstepan.kakafka.broker.core.LiveBroker;
 import com.github.mstepan.kakafka.broker.core.MetadataState;
+import com.github.mstepan.kakafka.broker.core.StringTopicMessage;
 import com.github.mstepan.kakafka.broker.core.topic.TopicInfo;
 import com.github.mstepan.kakafka.broker.core.topic.TopicPartitionInfo;
 import com.github.mstepan.kakafka.command.Command;
 import com.github.mstepan.kakafka.command.CommandEncoder;
 import com.github.mstepan.kakafka.command.CreateTopicCommand;
 import com.github.mstepan.kakafka.command.GetMetadataCommand;
+import com.github.mstepan.kakafka.command.PushMessageCommand;
 import com.github.mstepan.kakafka.command.response.CommandResponseDecoder;
 import com.github.mstepan.kakafka.command.response.CreateTopicCommandResponse;
 import com.github.mstepan.kakafka.command.response.MetadataCommandResponse;
+import com.github.mstepan.kakafka.command.response.PushMessageCommandResponse;
 import com.github.mstepan.kakafka.io.DataIn;
 import com.github.mstepan.kakafka.io.DataOut;
 import java.io.DataInputStream;
@@ -19,6 +23,7 @@ import java.net.Socket;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
+import java.util.Optional;
 import java.util.UUID;
 
 public final class SimpleBlockingClientMain {
@@ -29,6 +34,8 @@ public final class SimpleBlockingClientMain {
     private static final int GET_METADATA_FAILED_EXIT_CODE = 5;
 
     private static final int CANT_CREATE_TOPIC_CODE = 6;
+
+    private static final int CANT_FIND_TOPIC_PARTITION_LEADER_EXIT_CODE = 7;
 
     // provide list of seed broker to connect to
     private static final List<BrokerHost> seedBrokers =
@@ -77,11 +84,7 @@ public final class SimpleBlockingClientMain {
             final MetadataState metaState = metaResponse.state();
             printMetadata(metaState);
 
-            try (Socket leader =
-                    connect(
-                            new BrokerHost(
-                                    metaState.leaderBroker().host(),
-                                    metaState.leaderBroker().port()))) {
+            try (Socket leader = connect(BrokerHost.fromLiveBroker(metaState.leaderBroker()))) {
                 if (leader == null) {
                     System.exit(CANT_CONNECT_TO_LEADER_EXIT_CODE);
                 }
@@ -90,7 +93,45 @@ public final class SimpleBlockingClientMain {
 
                 TopicInfo info = createTopic(leader);
                 printTopicInfo(info);
+
+                pushMessage(info, metaState, new StringTopicMessage("key-123", "hello world!!!"));
             }
+        } catch (IOException ioEx) {
+            ioEx.printStackTrace();
+        }
+    }
+
+    private void pushMessage(
+            TopicInfo info, MetadataState metaState, StringTopicMessage stringTopicMessage)
+            throws IOException {
+
+        List<TopicPartitionInfo> partitions = info.partitions();
+
+        int partitionIdx = Math.abs(stringTopicMessage.key().hashCode()) % partitions.size();
+
+        TopicPartitionInfo partitionToPushMessage = partitions.get(partitionIdx);
+
+        Optional<LiveBroker> maybeBroker =
+                metaState.findBrokerById(partitionToPushMessage.leader());
+
+        if (maybeBroker.isEmpty()) {
+            System.exit(CANT_FIND_TOPIC_PARTITION_LEADER_EXIT_CODE);
+        }
+
+        BrokerHost brokerHost = maybeBroker.map(BrokerHost::fromLiveBroker).get();
+
+        try (Socket brokerToPush = connect(brokerHost);
+                DataInputStream dataIn = new DataInputStream(brokerToPush.getInputStream());
+                DataOutputStream dataOut = new DataOutputStream(brokerToPush.getOutputStream())) {
+
+            DataIn in = DataIn.fromStandardStream(dataIn);
+
+            System.out.printf("Pushing message to broker: %s%n", brokerHost);
+
+            sendCommand(new PushMessageCommand(stringTopicMessage), dataOut);
+
+            PushMessageCommandResponse pushResp =
+                    (PushMessageCommandResponse) CommandResponseDecoder.decode(in);
         }
     }
 

@@ -21,6 +21,7 @@ public final class CommandDecoder extends ReplayingDecoder<Void> {
             case EXIT -> ExitCommand.decode(in);
             case GET_METADATA -> GetMetadataCommand.decode(in);
             case CREATE_TOPIC -> CreateTopicCommand.decode(in);
+            case PUSH_MESSAGE -> PushMessageCommand.decode(in);
         };
     }
 }
