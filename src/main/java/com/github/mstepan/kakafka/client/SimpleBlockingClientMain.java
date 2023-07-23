@@ -9,9 +9,11 @@ import com.github.mstepan.kakafka.command.Command;
 import com.github.mstepan.kakafka.command.CommandEncoder;
 import com.github.mstepan.kakafka.command.CreateTopicCommand;
 import com.github.mstepan.kakafka.command.GetMetadataCommand;
+import com.github.mstepan.kakafka.command.GetTopicInfoCommand;
 import com.github.mstepan.kakafka.command.PushMessageCommand;
 import com.github.mstepan.kakafka.command.response.CommandResponseDecoder;
 import com.github.mstepan.kakafka.command.response.CreateTopicCommandResponse;
+import com.github.mstepan.kakafka.command.response.GetTopicInfoCommandResponse;
 import com.github.mstepan.kakafka.command.response.MetadataCommandResponse;
 import com.github.mstepan.kakafka.command.response.PushMessageCommandResponse;
 import com.github.mstepan.kakafka.io.DataIn;
@@ -24,6 +26,7 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 import java.util.Optional;
+import java.util.UUID;
 
 public final class SimpleBlockingClientMain {
 
@@ -35,6 +38,8 @@ public final class SimpleBlockingClientMain {
     private static final int CANT_CREATE_TOPIC_CODE = 6;
 
     private static final int CANT_FIND_TOPIC_PARTITION_LEADER_EXIT_CODE = 7;
+
+    private static final int TOPIC_INFO_NOT_FOUNT_EXIT_CODE = 8;
 
     // provide list of seed broker to connect to
     private static final List<BrokerHost> seedBrokers =
@@ -77,58 +82,62 @@ public final class SimpleBlockingClientMain {
 
     public void run() {
 
-        try (Socket socket = findAvailableBroker()) {
+        try (Socket socket = findAvailableBroker();
+                DataInputStream dataIn = new DataInputStream(socket.getInputStream());
+                DataOutputStream dataOut = new DataOutputStream(socket.getOutputStream())) {
 
-            final MetadataCommandResponse metaResponse = getMetadata(socket);
+            final MetadataCommandResponse metaResponse = getMetadata(dataIn, dataOut);
             final MetadataState metaState = metaResponse.state();
             printMetadata(metaState);
 
+            final String topicName = "topic-" + UUID.randomUUID();
+
+            // connect to leader b/c only cluster leader can create new topics
             try (Socket leader = connect(BrokerHost.fromLiveBroker(metaState.leaderBroker()))) {
                 if (leader == null) {
+                    System.err.println("Can't connect to LEADER broker");
                     System.exit(CANT_CONNECT_TO_LEADER_EXIT_CODE);
                 }
-
                 System.out.println("Successfully connected to LEADER broker");
-
-                TopicInfo info = createTopic(leader);
+                TopicInfo info = createTopic(leader, topicName);
                 printTopicInfo(info);
-
-                pushMessage(info, metaState, new StringTopicMessage("key-123", "no need to lie"));
             }
+
+            // Get existing topic info
+            TopicInfo info = getTopicInfo(dataIn, dataOut, topicName);
+            pushMessage(info, metaState, new StringTopicMessage("key-123", "no need to lie"));
+
         } catch (IOException ioEx) {
             ioEx.printStackTrace();
         }
     }
 
-    private MetadataCommandResponse getMetadata(Socket socket) throws IOException {
-        try (DataOutputStream dataOut = new DataOutputStream(socket.getOutputStream());
-                DataInputStream dataIn = new DataInputStream(socket.getInputStream())) {
+    private MetadataCommandResponse getMetadata(DataInputStream dataIn, DataOutputStream dataOut)
+            throws IOException {
 
-            DataIn in = DataIn.fromStandardStream(dataIn);
+        DataIn in = DataIn.fromStandardStream(dataIn);
 
-            sendCommand(new GetMetadataCommand(), dataOut);
+        sendCommand(new GetMetadataCommand(), dataOut);
 
-            MetadataCommandResponse metaCommandResp =
-                    (MetadataCommandResponse) CommandResponseDecoder.decode(in);
+        MetadataCommandResponse metaCommandResp =
+                (MetadataCommandResponse) CommandResponseDecoder.decode(in);
 
-            if (metaCommandResp.statusCode() != 200) {
-                System.err.println("Get Metadata request failed");
-                System.exit(GET_METADATA_FAILED_EXIT_CODE);
-            }
-
-            return metaCommandResp;
+        if (metaCommandResp.statusCode() != 200) {
+            System.err.println("Get Metadata request failed");
+            System.exit(GET_METADATA_FAILED_EXIT_CODE);
         }
+
+        return metaCommandResp;
     }
 
     private void printMetadata(MetadataState metaState) {
         System.out.println(metaState.asStr());
     }
 
-    private TopicInfo createTopic(Socket leader) throws IOException {
+    private TopicInfo createTopic(Socket leader, String topicName) throws IOException {
         try (DataInputStream dataIn = new DataInputStream(leader.getInputStream());
                 DataOutputStream dataOut = new DataOutputStream(leader.getOutputStream())) {
 
-            final String topicName = "topic-a";
             final int partitionsCnt = 3;
             final int replicasCnt = 3;
 
@@ -148,6 +157,25 @@ public final class SimpleBlockingClientMain {
         }
     }
 
+    private TopicInfo getTopicInfo(
+            DataInputStream dataIn, DataOutputStream dataOut, String topicName) throws IOException {
+
+        sendCommand(new GetTopicInfoCommand(topicName), dataOut);
+
+        GetTopicInfoCommandResponse topicInfoResp =
+                (GetTopicInfoCommandResponse)
+                        CommandResponseDecoder.decode(DataIn.fromStandardStream(dataIn));
+
+        if (topicInfoResp.status() != 200) {
+            System.err.printf("Topic '%s' not found", topicName);
+            System.exit(TOPIC_INFO_NOT_FOUNT_EXIT_CODE);
+        }
+
+        // todo: get TopicInfo from topicInfoResp
+
+        return null;
+    }
+
     private void printTopicInfo(TopicInfo info) {
         System.out.printf("%nTOPIC INFO%n");
         System.out.printf("topic: %s%n", info.topicName());
@@ -156,6 +184,10 @@ public final class SimpleBlockingClientMain {
         }
     }
 
+    /**
+     * Find leader broker for topic and partitions tuple. Send push message to the mentioned above
+     * broker.
+     */
     private void pushMessage(
             TopicInfo info, MetadataState metaState, StringTopicMessage stringTopicMessage)
             throws IOException {

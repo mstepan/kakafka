@@ -53,7 +53,6 @@ public final class CreateTopicCommandServerHandler extends ChannelInboundHandler
             if (maybeTopicInfo.isOk()) {
                 ctx.writeAndFlush(new CreateTopicCommandResponse(maybeTopicInfo.value(), 200));
             } else {
-                maybeTopicInfo.exception().printStackTrace();
                 ctx.writeAndFlush(new CreateTopicCommandResponse(null, 500));
             }
         } else {
@@ -128,15 +127,9 @@ public final class CreateTopicCommandServerHandler extends ChannelInboundHandler
             // store 'TopicInfo' as binary encoded value
             kvClient.put(topicKey, ByteSequence.from(topicInfo.toBytes())).get();
 
-            // TODO: below code added temporary to testing purpose
-            //            GetResponse topicGetResponseAfterPut = kvClient.get(topicKey).get();
-            //
-            //            KeyValue keyValue = topicGetResponseAfterPut.getKvs().get(0);
-            //
-            //            return Either.ok(TopicInfo.fromBytes(keyValue.getValue().getBytes()));
-
             return Either.ok(topicInfo);
         } catch (Exception ex) {
+            ex.printStackTrace();
             return Either.error(ex);
         }
     }

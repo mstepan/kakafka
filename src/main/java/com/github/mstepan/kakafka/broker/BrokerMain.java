@@ -8,6 +8,7 @@ import com.github.mstepan.kakafka.broker.etcd.LiveBrokersTrackerTask;
 import com.github.mstepan.kakafka.broker.handlers.CreateTopicCommandServerHandler;
 import com.github.mstepan.kakafka.broker.handlers.ExitCommandServerHandler;
 import com.github.mstepan.kakafka.broker.handlers.GetMetadataCommandServerHandler;
+import com.github.mstepan.kakafka.broker.handlers.GetTopicInfoServerHandler;
 import com.github.mstepan.kakafka.broker.handlers.PushMessageServerHandler;
 import com.github.mstepan.kakafka.broker.utils.DaemonThreadFactory;
 import com.github.mstepan.kakafka.broker.wal.LogStorage;
@@ -145,6 +146,12 @@ public final class BrokerMain {
                                             new GetMetadataCommandServerHandler(
                                                     brokerCtx.config().brokerName(),
                                                     brokerCtx.metadata()));
+
+                                    pipeline.addLast(
+                                            IO_BLOCKING_ETC_CALLS_GROUP,
+                                            "getTopicInfo",
+                                            new GetTopicInfoServerHandler(
+                                                    brokerCtx.config().brokerName(), brokerCtx));
 
                                     pipeline.addLast(
                                             IO_BLOCKING_FILE_SYSTEM_CALLS_GROUP,
