@@ -107,7 +107,10 @@ public final class SimpleBlockingClientMain {
             TopicInfo info = getTopicInfo(dataIn, dataOut, topicName);
             pushMessage(info, metaState, new StringTopicMessage("key-123", "hello, world"));
             pushMessage(info, metaState, new StringTopicMessage("key-123", "no need to lie"));
-            pushMessage(info, metaState, new StringTopicMessage("key-123", "it's a beautiful, beautiful live"));
+            pushMessage(
+                    info,
+                    metaState,
+                    new StringTopicMessage("key-123", "it's a beautiful, beautiful live"));
         } catch (IOException ioEx) {
             ioEx.printStackTrace();
         }

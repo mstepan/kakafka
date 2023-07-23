@@ -34,7 +34,6 @@ public final class LogStorage {
     public void appendMessage(String topicName, int partitionIdx, StringTopicMessage msg) {
         globalStorageLock.lock();
         try {
-
             PartitionFile partitionFile = getPartitionFile(topicName, partitionIdx);
 
             RandomWritableFile writableLogFile = partitionFile.log();
