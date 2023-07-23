@@ -1,5 +1,7 @@
 package com.github.mstepan.kakafka.broker.core.topic;
 
+import com.github.mstepan.kakafka.io.DataIn;
+import com.github.mstepan.kakafka.io.DataOut;
 import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
 import java.io.DataInputStream;
@@ -18,6 +20,9 @@ public record TopicInfo(String topicName, List<TopicPartitionInfo> partitions) {
         Objects.requireNonNull(partitions, "null 'partitions' detected");
     }
 
+    /**
+     * Unmarshall TopicInfo entity from 'etcd' value.
+     */
     public static TopicInfo fromBytes(byte[] bytes) {
 
         try (ByteArrayInputStream byteArrayIn = new ByteArrayInputStream(bytes);
@@ -86,5 +91,76 @@ public record TopicInfo(String topicName, List<TopicPartitionInfo> partitions) {
         }
 
         return byteArrayOut.toByteArray();
+    }
+
+
+    /**
+     * Encode TopicInfo for Netty handler.
+     */
+    public void encode(DataOut out) {
+
+        // | topicName, string |
+        out.writeString(topicName);
+
+        // | partitions size, int |
+        out.writeInt(partitions.size());
+
+        for (TopicPartitionInfo partitionInfo : partitions) {
+
+            // | partition idx, int |
+            out.writeInt(partitionInfo.idx());
+
+            // | partition leader id, string |
+            out.writeString(partitionInfo.leader());
+
+            List<String> replicas = partitionInfo.replicas();
+
+            // | replicas count, int |
+            out.writeInt(replicas.size());
+
+            for (String singleReplica : replicas) {
+                // | single replica id, string |
+                out.writeString(singleReplica);
+            }
+        }
+    }
+
+    /**
+     * Decode TopicInfo from Netty data.
+     */
+    public static TopicInfo decode(DataIn in) {
+
+        // | topicName, string |
+        String topicName = in.readString();
+
+        // | partitions size, int |
+        int partitionsCount = in.readInt();
+
+        List<TopicPartitionInfo> partitions = new ArrayList<>();
+
+        for (int i = 0; i < partitionsCount; ++i) {
+
+            // | partition idx, int |
+            int partitionIdx = in.readInt();
+
+            // | partition leader id string |
+            String leader = in.readString();
+
+            // | replicas count, int |
+            int replicasCount = in.readInt();
+
+            List<String> replicas = new ArrayList<>();
+
+            for (int repId = 0; repId < replicasCount; ++repId) {
+
+                // | single replica id, string |
+                String singleReplicaId = in.readString();
+
+                replicas.add(singleReplicaId);
+            }
+            partitions.add(new TopicPartitionInfo(partitionIdx, leader, replicas));
+        }
+
+        return new TopicInfo(topicName, partitions);
     }
 }
