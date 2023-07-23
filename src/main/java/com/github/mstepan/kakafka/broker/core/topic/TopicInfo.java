@@ -20,9 +20,7 @@ public record TopicInfo(String topicName, List<TopicPartitionInfo> partitions) {
         Objects.requireNonNull(partitions, "null 'partitions' detected");
     }
 
-    /**
-     * Unmarshall TopicInfo entity from 'etcd' value.
-     */
+    /** Unmarshall TopicInfo entity from 'etcd' value. */
     public static TopicInfo fromBytes(byte[] bytes) {
 
         try (ByteArrayInputStream byteArrayIn = new ByteArrayInputStream(bytes);
@@ -93,10 +91,7 @@ public record TopicInfo(String topicName, List<TopicPartitionInfo> partitions) {
         return byteArrayOut.toByteArray();
     }
 
-
-    /**
-     * Encode TopicInfo for Netty handler.
-     */
+    /** Encode TopicInfo for Netty handler. */
     public void encode(DataOut out) {
 
         // | topicName, string |
@@ -125,9 +120,7 @@ public record TopicInfo(String topicName, List<TopicPartitionInfo> partitions) {
         }
     }
 
-    /**
-     * Decode TopicInfo from Netty data.
-     */
+    /** Decode TopicInfo from Netty data. */
     public static TopicInfo decode(DataIn in) {
 
         // | topicName, string |

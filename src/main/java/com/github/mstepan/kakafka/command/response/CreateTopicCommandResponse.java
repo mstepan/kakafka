@@ -15,7 +15,7 @@ public record CreateTopicCommandResponse(TopicInfo info, int status) implements 
         // | status, int |
         out.writeInt(status);
 
-        if (status == 500) {
+        if (status != 200) {
             return;
         }
 
@@ -29,7 +29,7 @@ public record CreateTopicCommandResponse(TopicInfo info, int status) implements 
         // | status, int |
         int statusCode = in.readInt();
 
-        if (statusCode == 500) {
+        if (statusCode != 200) {
             return new CreateTopicCommandResponse(null, statusCode);
         }
 

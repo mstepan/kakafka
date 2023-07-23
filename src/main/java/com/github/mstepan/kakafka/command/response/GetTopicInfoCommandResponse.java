@@ -4,7 +4,6 @@ import com.github.mstepan.kakafka.broker.core.topic.TopicInfo;
 import com.github.mstepan.kakafka.command.CommandMarker;
 import com.github.mstepan.kakafka.io.DataIn;
 import com.github.mstepan.kakafka.io.DataOut;
-import java.util.List;
 
 public record GetTopicInfoCommandResponse(TopicInfo info, int status) implements CommandResponse {
 
@@ -16,7 +15,11 @@ public record GetTopicInfoCommandResponse(TopicInfo info, int status) implements
         // | status, int |
         out.writeInt(status);
 
-        // TODO: encode TopicInfo dto here
+        if (status != 200) {
+            return;
+        }
+
+        info.encode(out);
     }
 
     public static GetTopicInfoCommandResponse decode(DataIn in) {
@@ -30,7 +33,8 @@ public record GetTopicInfoCommandResponse(TopicInfo info, int status) implements
             return new GetTopicInfoCommandResponse(null, status);
         }
 
-        // TODO: decode TopicInfo dto here
-        return new GetTopicInfoCommandResponse(new TopicInfo("", List.of()), status);
+        TopicInfo topicInfo = TopicInfo.decode(in);
+
+        return new GetTopicInfoCommandResponse(topicInfo, status);
     }
 }

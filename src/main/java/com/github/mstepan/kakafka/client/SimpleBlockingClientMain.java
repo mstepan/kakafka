@@ -105,8 +105,9 @@ public final class SimpleBlockingClientMain {
 
             // Get existing topic info
             TopicInfo info = getTopicInfo(dataIn, dataOut, topicName);
+            pushMessage(info, metaState, new StringTopicMessage("key-123", "hello, world"));
             pushMessage(info, metaState, new StringTopicMessage("key-123", "no need to lie"));
-
+            pushMessage(info, metaState, new StringTopicMessage("key-123", "it's a beautiful, beautiful live"));
         } catch (IOException ioEx) {
             ioEx.printStackTrace();
         }
@@ -171,9 +172,7 @@ public final class SimpleBlockingClientMain {
             System.exit(TOPIC_INFO_NOT_FOUNT_EXIT_CODE);
         }
 
-        // todo: get TopicInfo from topicInfoResp
-
-        return null;
+        return topicInfoResp.info();
     }
 
     private void printTopicInfo(TopicInfo info) {
