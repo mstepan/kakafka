@@ -24,7 +24,6 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 import java.util.Optional;
-import java.util.UUID;
 
 public final class SimpleBlockingClientMain {
 
@@ -94,7 +93,7 @@ public final class SimpleBlockingClientMain {
                 TopicInfo info = createTopic(leader);
                 printTopicInfo(info);
 
-                pushMessage(info, metaState, new StringTopicMessage("some-key-value-123345466", "hello world!!!"));
+                pushMessage(info, metaState, new StringTopicMessage("key-123", "no need to lie"));
             }
         } catch (IOException ioEx) {
             ioEx.printStackTrace();
@@ -129,7 +128,7 @@ public final class SimpleBlockingClientMain {
         try (DataInputStream dataIn = new DataInputStream(leader.getInputStream());
                 DataOutputStream dataOut = new DataOutputStream(leader.getOutputStream())) {
 
-            final String topicName = "topic-" + UUID.randomUUID();
+            final String topicName = "topic-a";
             final int partitionsCnt = 3;
             final int replicasCnt = 3;
 
@@ -177,8 +176,8 @@ public final class SimpleBlockingClientMain {
         BrokerHost brokerHost = maybeBroker.map(BrokerHost::fromLiveBroker).get();
 
         try (Socket brokerToPush = connect(brokerHost);
-             DataInputStream dataIn = new DataInputStream(brokerToPush.getInputStream());
-             DataOutputStream dataOut = new DataOutputStream(brokerToPush.getOutputStream())) {
+                DataInputStream dataIn = new DataInputStream(brokerToPush.getInputStream());
+                DataOutputStream dataOut = new DataOutputStream(brokerToPush.getOutputStream())) {
 
             DataIn in = DataIn.fromStandardStream(dataIn);
 

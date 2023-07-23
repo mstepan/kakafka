@@ -125,10 +125,10 @@ public final class CreateTopicCommandServerHandler extends ChannelInboundHandler
                                         .formatted(command.topicName())));
             }
 
-            // TODO: below code added temporary to testing purpose
             // store 'TopicInfo' as binary encoded value
-            //            kvClient.put(topicKey, ByteSequence.from(topicInfo.toBytes())).get();
-            //
+            kvClient.put(topicKey, ByteSequence.from(topicInfo.toBytes())).get();
+
+            // TODO: below code added temporary to testing purpose
             //            GetResponse topicGetResponseAfterPut = kvClient.get(topicKey).get();
             //
             //            KeyValue keyValue = topicGetResponseAfterPut.getKvs().get(0);

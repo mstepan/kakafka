@@ -10,7 +10,10 @@
 #NATIVE_MEMORY_TRACKER="-XX:+UnlockDiagnosticVMOptions -XX:NativeMemoryTracking=summary -XX:+PrintNMTStatistics"
 
 cluster_mode=true
-NODES_CNT=5
+NODES_CNT=1
+
+echo "Removing all files from data folder './data'"
+rm -rf data/*
 
 if [ "$cluster_mode" = true ]; then
     #
