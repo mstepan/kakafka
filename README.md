@@ -8,33 +8,43 @@ Use the following:
 
 ## Build
 ```
-./mvnw clean package
-```
-
-## Unit tests.
-
-```
-./mvnw test
+./mvnw clean package -DskipTests
 ```
 
 ## Local run
 
-To start a single broker or set of broker execute:
+After the build is completed you can start a single broker or set of broker using script:
 
 ```bash
 ./run.sh
 ```
 
-Inside mentioned above file you can find cluster configuration:
+Inside `run.sh` script you can find cluster configuration:
 ```
-cluster_mode=true
-NODES_CNT=5
+cluster_mode=true # run application in cluster mode
+NODES_CNT=5 # number of broker to start
+```
+
+You can find all running brokers by executing:
+```bash
+jps | grep kakafka-*
 ```
 
 To stop all running brokers execute:
 ```bash
 ./stop-all.sh
 ```
+
+## Unit/Integration tests.
+
+Right now we only have integration tests, so to run tests suites you should build application first and 
+then run brokers locally using `run.sh` script.
+
+To run tests just execute:
+```
+./mvnw test
+```
+
 
 ## Kakafka Protocol Description
 
