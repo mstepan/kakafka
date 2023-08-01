@@ -17,6 +17,8 @@ import com.github.mstepan.kakafka.command.response.MetadataCommandResponse;
 import com.github.mstepan.kakafka.command.response.PushMessageCommandResponse;
 import com.github.mstepan.kakafka.io.DataIn;
 import com.github.mstepan.kakafka.io.DataOut;
+import com.github.mstepan.kakafka.io.IOUtils;
+
 import java.io.DataInputStream;
 import java.io.DataOutputStream;
 import java.io.IOException;
@@ -26,7 +28,8 @@ import java.util.Collections;
 import java.util.List;
 import java.util.Optional;
 
-public final class KakafkaClient {
+/** This class is not thread safe. At least for NOW. So should be instantiated per thread. */
+public final class KakafkaClient implements AutoCloseable {
 
     // provide list of seed broker to connect to
     private static final List<BrokerHost> SEED_BROKERS =
@@ -37,12 +40,40 @@ public final class KakafkaClient {
                     new BrokerHost("localhost", 9094),
                     new BrokerHost("localhost", 9095));
 
+    private Socket clusterLeader;
+
+    private Socket lastBrokerConnection;
+
+    private void checkLastBrokerConnection() {
+        if (lastBrokerConnection == null) {
+            lastBrokerConnection = findAvailableBroker();
+        }
+    }
+
+    private void checkClusterLeader(){
+        if (clusterLeader == null) {
+
+            Optional<MetadataCommandResponse> metadataResponse = getMetadata();
+
+            if (metadataResponse.isEmpty()) {
+                throw new IllegalStateException("Can't get metadata from cluster to find the cluster leader");
+            }
+
+            clusterLeader =
+                    connect(
+                            BrokerHost.fromLiveBroker(
+                                    metadataResponse.get().state().leaderBroker()));
+            System.out.println("Successfully connected to LEADER broker");
+        }
+    }
+
     /** Get cluster metadata using any alive broker. */
     public Optional<MetadataCommandResponse> getMetadata() {
+        checkLastBrokerConnection();
 
-        try (Socket socket = findAvailableBroker();
-                DataInputStream dataIn = new DataInputStream(socket.getInputStream());
-                DataOutputStream dataOut = new DataOutputStream(socket.getOutputStream())) {
+        try {
+            DataInputStream dataIn = new DataInputStream(lastBrokerConnection.getInputStream());
+            DataOutputStream dataOut = new DataOutputStream(lastBrokerConnection.getOutputStream());
 
             DataIn in = DataIn.fromStandardStream(dataIn);
 
@@ -64,43 +95,28 @@ public final class KakafkaClient {
 
     /** connect to leader b/c only cluster leader can create new topics */
     public Optional<TopicInfo> createTopic(String topicName) {
+        try {
+            checkClusterLeader();
 
-        Optional<MetadataCommandResponse> metadataResponse = getMetadata();
+            DataInputStream dataIn = new DataInputStream(clusterLeader.getInputStream());
+            DataOutputStream dataOut = new DataOutputStream(clusterLeader.getOutputStream());
 
-        if (metadataResponse.isEmpty()) {
-            System.err.println("Can't get metadata from cluster");
-            return Optional.empty();
-        }
+            final int partitionsCnt = 3;
+            final int replicasCnt = 3;
 
-        try (Socket leader =
-                connect(BrokerHost.fromLiveBroker(metadataResponse.get().state().leaderBroker()))) {
-            if (leader == null) {
-                System.err.println("Can't connect to LEADER broker");
+            sendCommand(new CreateTopicCommand(topicName, partitionsCnt, replicasCnt), dataOut);
+            CreateTopicCommandResponse createTopicResponse =
+                    (CreateTopicCommandResponse)
+                            CommandResponseDecoder.decode(DataIn.fromStandardStream(dataIn));
+
+            if (createTopicResponse.status() != 200) {
+                System.err.printf("Create topic '%s' FAILED.%n", topicName);
                 return Optional.empty();
             }
 
-            System.out.println("Successfully connected to LEADER broker");
+            System.out.printf("Create topic '%s' success.%n", topicName);
 
-            try (DataInputStream dataIn = new DataInputStream(leader.getInputStream());
-                    DataOutputStream dataOut = new DataOutputStream(leader.getOutputStream())) {
-
-                final int partitionsCnt = 3;
-                final int replicasCnt = 3;
-
-                sendCommand(new CreateTopicCommand(topicName, partitionsCnt, replicasCnt), dataOut);
-                CreateTopicCommandResponse createTopicResponse =
-                        (CreateTopicCommandResponse)
-                                CommandResponseDecoder.decode(DataIn.fromStandardStream(dataIn));
-
-                if (createTopicResponse.status() != 200) {
-                    System.err.printf("Create topic '%s' FAILED.%n", topicName);
-                    return Optional.empty();
-                }
-
-                System.out.printf("Create topic '%s' success.%n", topicName);
-
-                return Optional.of(createTopicResponse.info());
-            }
+            return Optional.of(createTopicResponse.info());
         } catch (IOException ioEx) {
             throw new IllegalStateException(ioEx);
         }
@@ -111,9 +127,12 @@ public final class KakafkaClient {
      * etc.
      */
     public Optional<TopicInfo> getTopicInfo(String topicName) {
-        try (Socket socket = findAvailableBroker();
-                DataInputStream dataIn = new DataInputStream(socket.getInputStream());
-                DataOutputStream dataOut = new DataOutputStream(socket.getOutputStream())) {
+
+        checkLastBrokerConnection();
+
+        try {
+            DataInputStream dataIn = new DataInputStream(lastBrokerConnection.getInputStream());
+            DataOutputStream dataOut = new DataOutputStream(lastBrokerConnection.getOutputStream());
 
             sendCommand(new GetTopicInfoCommand(topicName), dataOut);
 
@@ -225,6 +244,17 @@ public final class KakafkaClient {
             return socket;
         } catch (IOException ioEx) {
             return null;
+        }
+    }
+
+    @Override
+    public void close() {
+        if (clusterLeader != null) {
+            IOUtils.closeSocket(clusterLeader);
+        }
+
+        if (lastBrokerConnection != null) {
+            IOUtils.closeSocket(lastBrokerConnection);
         }
     }
 }

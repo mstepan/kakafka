@@ -8,31 +8,38 @@ import com.github.mstepan.kakafka.command.response.MetadataCommandResponse;
 
 import java.util.Optional;
 import java.util.UUID;
+import java.util.concurrent.ThreadLocalRandom;
 
 public final class SimpleClientScenario {
 
     public static void main(String[] args) {
 
-        KakafkaClient client = new KakafkaClient();
+        try (KakafkaClient client = new KakafkaClient()) {
 
-        Optional<MetadataCommandResponse> maybeMetadataResponse = client.getMetadata();
+            Optional<MetadataCommandResponse> maybeMetadataResponse = client.getMetadata();
 
-        if (maybeMetadataResponse.isEmpty()) {
-            return;
+            if (maybeMetadataResponse.isEmpty()) {
+                return;
+            }
+
+            MetadataState metaState = maybeMetadataResponse.get().state();
+            printMetadata(metaState);
+
+            final String topicName = "topic-" + UUID.randomUUID();
+
+            Optional<TopicInfo> maybeTopicInfo = client.createTopic(topicName);
+            maybeTopicInfo.ifPresent(SimpleClientScenario::printTopicInfo);
+
+            ThreadLocalRandom rand = ThreadLocalRandom.current();
+
+            for (int i = 0; i < 3; ++i) {
+                final String key = "key-123";
+                final String value =
+                        "value-%d-%d".formatted(rand.nextInt(1000), rand.nextInt(1000));
+
+                client.pushMessage(topicName, new StringTopicMessage(key, value));
+            }
         }
-
-        MetadataState metaState = maybeMetadataResponse.get().state();
-        printMetadata(metaState);
-
-        final String topicName = "topic-" + UUID.randomUUID();
-
-        Optional<TopicInfo> maybeTopicInfo = client.createTopic(topicName);
-        maybeTopicInfo.ifPresent(SimpleClientScenario::printTopicInfo);
-
-        client.pushMessage(topicName, new StringTopicMessage("key-123", "hello, world"));
-        client.pushMessage(topicName, new StringTopicMessage("key-123", "no need to lie"));
-        client.pushMessage(
-                topicName, new StringTopicMessage("key-123", "it's a beautiful, beautiful live"));
     }
 
     private static void printMetadata(MetadataState metaState) {
