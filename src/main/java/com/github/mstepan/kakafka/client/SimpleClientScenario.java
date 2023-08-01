@@ -16,6 +16,7 @@ public final class SimpleClientScenario {
 
         try (KakafkaClient client = new KakafkaClient()) {
 
+            // get some cluster metadata
             Optional<MetadataCommandResponse> maybeMetadataResponse = client.getMetadata();
 
             if (maybeMetadataResponse.isEmpty()) {
@@ -27,6 +28,7 @@ public final class SimpleClientScenario {
 
             final String topicName = "topic-" + UUID.randomUUID();
 
+            // create new topic
             Optional<CreateTopicCommandResponse> maybeCreateTopicCommandResp =
                     client.createTopic(topicName);
             maybeCreateTopicCommandResp.ifPresent(resp -> printTopicInfo(resp.info()));
@@ -38,6 +40,7 @@ public final class SimpleClientScenario {
                 final String value =
                         "value-%d-%d".formatted(rand.nextInt(1000), rand.nextInt(1000));
 
+                // push some messages to topic
                 client.pushMessage(topicName, new StringTopicMessage(key, value));
             }
         }

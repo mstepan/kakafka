@@ -28,11 +28,19 @@ public class PushMessageIntTest {
                     "Incorrect status code for create topic response");
 
             assertPushSuccess(
-                    client.pushMessage(topicName, new StringTopicMessage("key-1", "value-1")));
+                    client.pushMessage(topicName, new StringTopicMessage("key-1", "value-1.1")));
             assertPushSuccess(
-                    client.pushMessage(topicName, new StringTopicMessage("key-1", "value-2")));
+                    client.pushMessage(topicName, new StringTopicMessage("key-1", "value-1.2")));
+
             assertPushSuccess(
-                    client.pushMessage(topicName, new StringTopicMessage("key-1", "value-3")));
+                    client.pushMessage(topicName, new StringTopicMessage("key-2", "value-2.1")));
+            assertPushSuccess(
+                    client.pushMessage(topicName, new StringTopicMessage("key-2", "value-2.2")));
+
+            assertPushSuccess(
+                    client.pushMessage(topicName, new StringTopicMessage("key-3", "value-3.1")));
+            assertPushSuccess(
+                    client.pushMessage(topicName, new StringTopicMessage("key-3", "value-3.2")));
         }
     }
 

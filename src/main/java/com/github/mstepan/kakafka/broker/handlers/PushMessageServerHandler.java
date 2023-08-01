@@ -33,9 +33,6 @@ public final class PushMessageServerHandler extends ChannelInboundHandlerAdapter
                         pushCommand.getMsgKey(),
                         pushCommand.getMsgValue());
 
-                // TODO: write to local broker FS
-                // TODO: append message to end of write-ahead log (WAL)
-
                 logStorage.appendMessage(
                         pushCommand.topicName(), pushCommand.partitionsIdx(), pushCommand.msg());
 

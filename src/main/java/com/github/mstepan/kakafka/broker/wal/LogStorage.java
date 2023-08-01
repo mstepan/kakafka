@@ -31,19 +31,23 @@ public final class LogStorage {
         IOUtils.createFolderIfNotExist(config.brokerName(), brokerDataFolder);
     }
 
+    /*
+     * Write to local broker FS. Append message to end of write-ahead log (WAL).
+     */
     public void appendMessage(String topicName, int partitionIdx, StringTopicMessage msg) {
         globalStorageLock.lock();
         try {
             PartitionFile partitionFile = getPartitionFile(topicName, partitionIdx);
 
+            MessageIndexAndOffset lastMsgIdx = partitionFile.lastMessageIdxAndOffset();
+
             RandomWritableFile writableLogFile = partitionFile.log();
+            long newOffset = writableLogFile.appendKeyValue(msg.key(), msg.value());
 
-            long msgOffset = writableLogFile.end();
-            writableLogFile.append(msg.key(), msg.value());
-
-            long msgIdx = 0; // todo: read last message index from index file if not empty
             RandomWritableFile writableIndexFile = partitionFile.index();
-            writableIndexFile.append(msgIdx, msgOffset);
+            writableIndexFile.appendMessageOffset(lastMsgIdx.msgIdx() + 1L, newOffset);
+
+            partitionFile.updateLastMessageIdxAndOffset(lastMsgIdx.msgIdx() + 1L, newOffset);
         } finally {
             globalStorageLock.unlock();
         }
@@ -54,7 +58,8 @@ public final class LogStorage {
         final String topicAndPartitionKey = "%s/%d".formatted(topicName, partitionIdx);
 
         if (topicAndPartitionToFile.containsKey(topicAndPartitionKey)) {
-            System.out.printf("[%s]Getting PartitionFile from in-memory hash", config.brokerName());
+            System.out.printf(
+                    "[%s]Getting PartitionFile from in-memory hash%n", config.brokerName());
             return topicAndPartitionToFile.get(topicAndPartitionKey);
         }
         /*
@@ -71,11 +76,11 @@ public final class LogStorage {
         IOUtils.createFolderIfNotExist(config.brokerName(), partitionFolder);
 
         // todo: use normal message offset here
-        long messageOffset = 0L;
+        long lastMessageIdx = 0L;
         final Path logFilePath =
-                Path.of(partitionFolder.toString(), "%010d.log".formatted(messageOffset));
+                Path.of(partitionFolder.toString(), "%010d.log".formatted(lastMessageIdx));
         final Path indexFilePath =
-                Path.of(partitionFolder.toString(), "%010d.index".formatted(messageOffset));
+                Path.of(partitionFolder.toString(), "%010d.index".formatted(lastMessageIdx));
 
         IOUtils.createFileIfNotExist(config.brokerName(), logFilePath);
         IOUtils.createFileIfNotExist(config.brokerName(), indexFilePath);
@@ -85,7 +90,7 @@ public final class LogStorage {
 
         PartitionFile partitionFile = new PartitionFile(writableLogFile, writableIndexFile);
 
-        System.out.printf("[%s]Saving PartitionFile in-memory", config.brokerName());
+        System.out.printf("[%s]Saving PartitionFile in-memory%n", config.brokerName());
         topicAndPartitionToFile.put(topicAndPartitionKey, partitionFile);
 
         return partitionFile;
