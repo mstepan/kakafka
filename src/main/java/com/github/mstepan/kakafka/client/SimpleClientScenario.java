@@ -4,8 +4,8 @@ import com.github.mstepan.kakafka.broker.core.MetadataState;
 import com.github.mstepan.kakafka.broker.core.StringTopicMessage;
 import com.github.mstepan.kakafka.broker.core.topic.TopicInfo;
 import com.github.mstepan.kakafka.broker.core.topic.TopicPartitionInfo;
+import com.github.mstepan.kakafka.command.response.CreateTopicCommandResponse;
 import com.github.mstepan.kakafka.command.response.MetadataCommandResponse;
-
 import java.util.Optional;
 import java.util.UUID;
 import java.util.concurrent.ThreadLocalRandom;
@@ -27,8 +27,9 @@ public final class SimpleClientScenario {
 
             final String topicName = "topic-" + UUID.randomUUID();
 
-            Optional<TopicInfo> maybeTopicInfo = client.createTopic(topicName);
-            maybeTopicInfo.ifPresent(SimpleClientScenario::printTopicInfo);
+            Optional<CreateTopicCommandResponse> maybeCreateTopicCommandResp =
+                    client.createTopic(topicName);
+            maybeCreateTopicCommandResp.ifPresent(resp -> printTopicInfo(resp.info()));
 
             ThreadLocalRandom rand = ThreadLocalRandom.current();
 

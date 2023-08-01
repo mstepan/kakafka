@@ -18,7 +18,6 @@ import com.github.mstepan.kakafka.command.response.PushMessageCommandResponse;
 import com.github.mstepan.kakafka.io.DataIn;
 import com.github.mstepan.kakafka.io.DataOut;
 import com.github.mstepan.kakafka.io.IOUtils;
-
 import java.io.DataInputStream;
 import java.io.DataOutputStream;
 import java.io.IOException;
@@ -30,6 +29,15 @@ import java.util.Optional;
 
 /** This class is not thread safe. At least for NOW. So should be instantiated per thread. */
 public final class KakafkaClient implements AutoCloseable {
+
+    /** The default number of partitions per topic. */
+    public static final int DEFAULT_PARTITIONS_COUNT_PER_TOPIC = 3;
+
+    /**
+     * The replication factor for every partition. The number of brokers that will store messages
+     * for this partition as replicas.
+     */
+    public static final int DEFAULT_REPLICATION_FACTOR_FOR_SINGLE_PARTITION = 3;
 
     // provide list of seed broker to connect to
     private static final List<BrokerHost> SEED_BROKERS =
@@ -50,13 +58,14 @@ public final class KakafkaClient implements AutoCloseable {
         }
     }
 
-    private void checkClusterLeader(){
+    private void checkClusterLeader() {
         if (clusterLeader == null) {
 
             Optional<MetadataCommandResponse> metadataResponse = getMetadata();
 
             if (metadataResponse.isEmpty()) {
-                throw new IllegalStateException("Can't get metadata from cluster to find the cluster leader");
+                throw new IllegalStateException(
+                        "Can't get metadata from cluster to find the cluster leader");
             }
 
             clusterLeader =
@@ -94,17 +103,19 @@ public final class KakafkaClient implements AutoCloseable {
     }
 
     /** connect to leader b/c only cluster leader can create new topics */
-    public Optional<TopicInfo> createTopic(String topicName) {
+    public Optional<CreateTopicCommandResponse> createTopic(String topicName) {
         try {
             checkClusterLeader();
 
             DataInputStream dataIn = new DataInputStream(clusterLeader.getInputStream());
             DataOutputStream dataOut = new DataOutputStream(clusterLeader.getOutputStream());
 
-            final int partitionsCnt = 3;
-            final int replicasCnt = 3;
-
-            sendCommand(new CreateTopicCommand(topicName, partitionsCnt, replicasCnt), dataOut);
+            sendCommand(
+                    new CreateTopicCommand(
+                            topicName,
+                            DEFAULT_PARTITIONS_COUNT_PER_TOPIC,
+                            DEFAULT_REPLICATION_FACTOR_FOR_SINGLE_PARTITION),
+                    dataOut);
             CreateTopicCommandResponse createTopicResponse =
                     (CreateTopicCommandResponse)
                             CommandResponseDecoder.decode(DataIn.fromStandardStream(dataIn));
@@ -116,7 +127,7 @@ public final class KakafkaClient implements AutoCloseable {
 
             System.out.printf("Create topic '%s' success.%n", topicName);
 
-            return Optional.of(createTopicResponse.info());
+            return Optional.of(createTopicResponse);
         } catch (IOException ioEx) {
             throw new IllegalStateException(ioEx);
         }
