@@ -2,7 +2,6 @@ package com.github.mstepan.kakafka.client;
 
 import com.github.mstepan.kakafka.broker.core.LiveBroker;
 import com.github.mstepan.kakafka.broker.core.StringTopicMessage;
-import com.github.mstepan.kakafka.broker.core.topic.TopicInfo;
 import com.github.mstepan.kakafka.broker.core.topic.TopicPartitionInfo;
 import com.github.mstepan.kakafka.command.Command;
 import com.github.mstepan.kakafka.command.CommandEncoder;
@@ -137,7 +136,7 @@ public final class KakafkaClient implements AutoCloseable {
      * Get information for existing topic, such as partitions count, partitions leaders, replicas
      * etc.
      */
-    public Optional<TopicInfo> getTopicInfo(String topicName) {
+    public Optional<GetTopicInfoCommandResponse> getTopicInfo(String topicName) {
 
         checkLastBrokerConnection();
 
@@ -156,7 +155,7 @@ public final class KakafkaClient implements AutoCloseable {
                 return Optional.empty();
             }
 
-            return Optional.of(topicInfoResp.info());
+            return Optional.of(topicInfoResp);
         } catch (IOException ioEx) {
             throw new IllegalStateException(ioEx);
         }
@@ -169,14 +168,14 @@ public final class KakafkaClient implements AutoCloseable {
     public Optional<PushMessageCommandResponse> pushMessage(
             String topicName, StringTopicMessage stringTopicMessage) {
 
-        Optional<TopicInfo> maybeTopicInfo = getTopicInfo(topicName);
+        Optional<GetTopicInfoCommandResponse> maybeTopicInfoResp = getTopicInfo(topicName);
 
-        if (maybeTopicInfo.isEmpty()) {
+        if (maybeTopicInfoResp.isEmpty()) {
             System.err.printf("Can't find topic info for topic '%s'", topicName);
             return Optional.empty();
         }
 
-        List<TopicPartitionInfo> partitions = maybeTopicInfo.get().partitions();
+        List<TopicPartitionInfo> partitions = maybeTopicInfoResp.get().info().partitions();
 
         int partitionIdx = Math.abs(stringTopicMessage.key().hashCode()) % partitions.size();
 
