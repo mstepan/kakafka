@@ -38,6 +38,17 @@ public final class DataIn {
         }
     }
 
+    public long readLong() {
+        if (nettyBuf != null) {
+            return nettyBuf.readLong();
+        }
+        try {
+            return dataInStream.readLong();
+        } catch (IOException ioEx) {
+            throw new IllegalStateException(ioEx);
+        }
+    }
+
     /**
      * The string representation will have the following format: |<length>, int| <char sequence>,
      * chars |

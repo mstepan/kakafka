@@ -4,6 +4,7 @@ import com.github.mstepan.kakafka.broker.core.MetadataState;
 import com.github.mstepan.kakafka.broker.core.StringTopicMessage;
 import com.github.mstepan.kakafka.broker.core.topic.TopicInfo;
 import com.github.mstepan.kakafka.broker.core.topic.TopicPartitionInfo;
+import com.github.mstepan.kakafka.command.response.ConsumeMessageCommandResponse;
 import com.github.mstepan.kakafka.command.response.CreateTopicCommandResponse;
 import com.github.mstepan.kakafka.command.response.MetadataCommandResponse;
 import java.util.Optional;
@@ -42,6 +43,17 @@ public final class SimpleClientScenario {
 
                 // push some messages to topic
                 client.pushMessage(topicName, new StringTopicMessage(key, value));
+            }
+
+            for (int parIdx = 0; parIdx < 3; ++parIdx) {
+                ConsumeMessageCommandResponse consumeMsgResp =
+                        client.consumeMessage(topicName, parIdx, 0);
+
+                if (consumeMsgResp.status() == 200) {
+                    System.out.printf(
+                            "Message received key = '%s', value = '%s'%n",
+                            consumeMsgResp.key(), consumeMsgResp.value());
+                }
             }
         }
     }

@@ -39,6 +39,18 @@ public final class DataOut {
         }
     }
 
+    public void writeLong(long value) {
+        if (nettyBuf != null) {
+            nettyBuf.writeLong(value);
+        } else {
+            try {
+                dataOutStream.writeLong(value);
+            } catch (IOException ioEx) {
+                throw new IllegalStateException(ioEx);
+            }
+        }
+    }
+
     public void writeString(String value) {
         if (nettyBuf != null) {
             nettyBuf.writeInt(value.length());

@@ -1,6 +1,8 @@
 package com.github.mstepan.kakafka.command;
 
 public enum CommandMarker {
+    CONSUME_MESSAGE(5),
+
     GET_TOPIC_INFO(4),
 
     PUSH_MESSAGE(3),

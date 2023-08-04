@@ -5,11 +5,13 @@ import com.github.mstepan.kakafka.broker.core.StringTopicMessage;
 import com.github.mstepan.kakafka.broker.core.topic.TopicPartitionInfo;
 import com.github.mstepan.kakafka.command.Command;
 import com.github.mstepan.kakafka.command.CommandEncoder;
+import com.github.mstepan.kakafka.command.ConsumeMessageCommand;
 import com.github.mstepan.kakafka.command.CreateTopicCommand;
 import com.github.mstepan.kakafka.command.GetMetadataCommand;
 import com.github.mstepan.kakafka.command.GetTopicInfoCommand;
 import com.github.mstepan.kakafka.command.PushMessageCommand;
 import com.github.mstepan.kakafka.command.response.CommandResponseDecoder;
+import com.github.mstepan.kakafka.command.response.ConsumeMessageCommandResponse;
 import com.github.mstepan.kakafka.command.response.CreateTopicCommandResponse;
 import com.github.mstepan.kakafka.command.response.GetTopicInfoCommandResponse;
 import com.github.mstepan.kakafka.command.response.MetadataCommandResponse;
@@ -188,17 +190,9 @@ public final class KakafkaClient implements AutoCloseable {
             return Optional.empty();
         }
 
-        Optional<LiveBroker> maybeBroker =
-                maybeMetadata.get().state().findBrokerById(partitionToPushMessage.leader());
+        LiveBroker topicAndPartitionLeader = getTopicAndPartitionLeader(topicName, partitionIdx);
 
-        if (maybeBroker.isEmpty()) {
-            System.err.printf(
-                    "Can't find leader broker for topic '%s' and partition '%d' to push message",
-                    topicName, partitionToPushMessage.idx());
-            return Optional.empty();
-        }
-
-        BrokerHost brokerHost = maybeBroker.map(BrokerHost::fromLiveBroker).get();
+        BrokerHost brokerHost = BrokerHost.fromLiveBroker(topicAndPartitionLeader);
 
         try (Socket brokerToPush = connect(brokerHost);
                 DataInputStream dataIn = new DataInputStream(brokerToPush.getInputStream());
@@ -217,6 +211,58 @@ public final class KakafkaClient implements AutoCloseable {
                     (PushMessageCommandResponse) CommandResponseDecoder.decode(in);
 
             return Optional.of(pushResp);
+        } catch (IOException ioEx) {
+            throw new IllegalStateException(ioEx);
+        }
+    }
+
+    private LiveBroker getTopicAndPartitionLeader(String topicName, int partIdx) {
+        Optional<GetTopicInfoCommandResponse> maybeTopicInfoResp = getTopicInfo(topicName);
+
+        if (maybeTopicInfoResp.isEmpty()) {
+            throw new IllegalStateException(
+                    "Can't find info for topic '%s', so can't obtain leader".formatted(topicName));
+        }
+
+        List<TopicPartitionInfo> partitions = maybeTopicInfoResp.get().info().partitions();
+
+        TopicPartitionInfo partitionInfo = partitions.get(partIdx);
+
+        Optional<MetadataCommandResponse> maybeMetadata = getMetadata();
+
+        if (maybeMetadata.isEmpty()) {
+            throw new IllegalStateException("Can't obtain cluster wide metadata");
+        }
+
+        Optional<LiveBroker> maybeBroker =
+                maybeMetadata.get().state().findBrokerById(partitionInfo.leader());
+
+        if (maybeBroker.isEmpty()) {
+            throw new IllegalStateException(
+                    "Can't find leader for topic '%s' and partition idx '%s'"
+                            .formatted(topicName, partIdx));
+        }
+
+        return maybeBroker.get();
+    }
+
+    /** Consumers read by default from the broker that is the leader for a given partition. */
+    public ConsumeMessageCommandResponse consumeMessage(
+            String topicName, int partitionIdx, int offset) {
+
+        LiveBroker topicPartitionLeader = getTopicAndPartitionLeader(topicName, partitionIdx);
+
+        BrokerHost brokerHost = BrokerHost.fromLiveBroker(topicPartitionLeader);
+
+        try (Socket brokerToConsume = connect(brokerHost);
+                DataInputStream dataIn = new DataInputStream(brokerToConsume.getInputStream());
+                DataOutputStream dataOut =
+                        new DataOutputStream(brokerToConsume.getOutputStream())) {
+
+            DataIn in = DataIn.fromStandardStream(dataIn);
+
+            sendCommand(new ConsumeMessageCommand(topicName, partitionIdx, offset), dataOut);
+            return (ConsumeMessageCommandResponse) CommandResponseDecoder.decode(in);
         } catch (IOException ioEx) {
             throw new IllegalStateException(ioEx);
         }

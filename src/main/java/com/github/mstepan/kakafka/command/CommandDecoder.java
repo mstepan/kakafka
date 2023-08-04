@@ -23,6 +23,7 @@ public final class CommandDecoder extends ReplayingDecoder<Void> {
             case CREATE_TOPIC -> CreateTopicCommand.decode(in);
             case PUSH_MESSAGE -> PushMessageCommand.decode(in);
             case GET_TOPIC_INFO -> GetTopicInfoCommand.decode(in);
+            case CONSUME_MESSAGE -> ConsumeMessageCommand.decode(in);
         };
     }
 }
