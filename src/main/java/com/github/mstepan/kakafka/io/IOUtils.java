@@ -1,11 +1,11 @@
 package com.github.mstepan.kakafka.io;
 
+import java.io.File;
 import java.io.IOException;
 import java.net.Socket;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.attribute.PosixFilePermission;
-import java.nio.file.attribute.PosixFilePermissions;
 import java.util.Set;
 
 public final class IOUtils {
@@ -27,12 +27,29 @@ public final class IOUtils {
         }
     }
 
-    public static void createFileIfNotExist(String brokerName, Path pathToFile) {
+    /** Create file and all intermediate folder as needed if not exist. */
+    public static void createFileIfNotExist(Path pathToFile) {
         try {
-            if (Files.notExists(pathToFile)) {
-                System.out.printf("[%s]Creating file '%s'%n", brokerName, pathToFile);
-                Files.createFile(
-                        pathToFile, PosixFilePermissions.asFileAttribute(fileDefaultPermissions()));
+            File file = pathToFile.toFile();
+
+            if (!file.exists()) {
+                File parentFolder = file.getParentFile();
+
+                // check parent folder exist, if not create all intermediate folders
+                if (!parentFolder.exists()) {
+                    boolean intermediateDirsCreated = parentFolder.mkdirs();
+                    if (!intermediateDirsCreated) {
+                        throw new IllegalStateException(
+                                "Can't create intermediate directories '%s'"
+                                        .formatted(parentFolder));
+                    }
+                }
+
+                // create file after all intermediate folder constructed
+                boolean fileCreated = file.createNewFile();
+                if (!fileCreated) {
+                    throw new IllegalStateException("Can't create file '%s'".formatted(file));
+                }
             }
         } catch (IOException ioEx) {
             throw new IllegalStateException(
@@ -58,5 +75,10 @@ public final class IOUtils {
                 throw new IllegalStateException("Can't properly close the Socket", ioEx);
             }
         }
+    }
+
+    /** Check if specified file or folder exist. */
+    public static boolean exist(Path path) {
+        return Files.exists(path);
     }
 }

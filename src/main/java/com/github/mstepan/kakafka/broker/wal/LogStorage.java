@@ -3,6 +3,7 @@ package com.github.mstepan.kakafka.broker.wal;
 import com.github.mstepan.kakafka.broker.BrokerConfig;
 import com.github.mstepan.kakafka.broker.core.StringTopicMessage;
 import com.github.mstepan.kakafka.broker.core.storage.PartitionFile;
+import com.github.mstepan.kakafka.broker.core.storage.TopicPartitionFS;
 import com.github.mstepan.kakafka.io.IOUtils;
 import com.github.mstepan.kakafka.io.RandomWritableFile;
 import java.nio.file.Path;
@@ -62,18 +63,37 @@ public final class LogStorage {
                     "[%s]Getting PartitionFile from in-memory hash%n", config.brokerName());
             return topicAndPartitionToFile.get(topicAndPartitionKey);
         }
-        /*
-        <brokerDataFolder> = ./data/<broker id>
-        <brokerDataFolder>/<topic-name>/partition-<partition idx>/0000000000.log <-- write-ahead log file
-        <brokerDataFolder>/<topic-name>/partition-<partition idx>/0000000000.index <-- index file (store mapping from message offset to file offset)
-        */
-        final Path topicFolder = Path.of(brokerDataFolder.toString(), topicName);
 
-        IOUtils.createFolderIfNotExist(config.brokerName(), topicFolder);
+        TopicPartitionFS topicPartitionFS = getTopicAndPartitionFileSystem(topicName, partitionIdx);
+
+        if (!IOUtils.exist(topicPartitionFS.logFilePath())) {
+            IOUtils.createFileIfNotExist(topicPartitionFS.logFilePath());
+        }
+
+        if (!IOUtils.exist(topicPartitionFS.indexFilePath())) {
+            IOUtils.createFileIfNotExist(topicPartitionFS.indexFilePath());
+        }
+
+        RandomWritableFile writableLogFile = new RandomWritableFile(topicPartitionFS.logFilePath());
+        RandomWritableFile writableIndexFile =
+                new RandomWritableFile(topicPartitionFS.indexFilePath());
+
+        PartitionFile partitionFile = new PartitionFile(writableLogFile, writableIndexFile);
+
+        System.out.printf("[%s]Saving PartitionFile in-memory%n", config.brokerName());
+        topicAndPartitionToFile.put(topicAndPartitionKey, partitionFile);
+
+        return partitionFile;
+    }
+
+    /**
+     * Construct full path to log file and index file using provided 'topicName' and 'partitionIdx'.
+     */
+    private TopicPartitionFS getTopicAndPartitionFileSystem(String topicName, int partitionIdx) {
+        final Path topicFolder = Path.of(brokerDataFolder.toString(), topicName);
 
         final Path partitionFolder =
                 Path.of(topicFolder.toString(), "partition-%d".formatted(partitionIdx));
-        IOUtils.createFolderIfNotExist(config.brokerName(), partitionFolder);
 
         // todo: use normal message offset here
         long lastMessageIdx = 0L;
@@ -82,17 +102,10 @@ public final class LogStorage {
         final Path indexFilePath =
                 Path.of(partitionFolder.toString(), "%010d.index".formatted(lastMessageIdx));
 
-        IOUtils.createFileIfNotExist(config.brokerName(), logFilePath);
-        IOUtils.createFileIfNotExist(config.brokerName(), indexFilePath);
+        return new TopicPartitionFS(logFilePath, indexFilePath);
+    }
 
-        RandomWritableFile writableLogFile = new RandomWritableFile(logFilePath);
-        RandomWritableFile writableIndexFile = new RandomWritableFile(indexFilePath);
-
-        PartitionFile partitionFile = new PartitionFile(writableLogFile, writableIndexFile);
-
-        System.out.printf("[%s]Saving PartitionFile in-memory%n", config.brokerName());
-        topicAndPartitionToFile.put(topicAndPartitionKey, partitionFile);
-
-        return partitionFile;
+    public StringTopicMessage getMessage(String topicName, int partitionIdx, long offset) {
+        return null;
     }
 }

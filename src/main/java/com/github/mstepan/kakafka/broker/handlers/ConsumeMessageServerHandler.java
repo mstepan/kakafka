@@ -1,5 +1,6 @@
 package com.github.mstepan.kakafka.broker.handlers;
 
+import com.github.mstepan.kakafka.broker.core.StringTopicMessage;
 import com.github.mstepan.kakafka.broker.wal.LogStorage;
 import com.github.mstepan.kakafka.command.Command;
 import com.github.mstepan.kakafka.command.ConsumeMessageCommand;
@@ -32,7 +33,20 @@ public final class ConsumeMessageServerHandler extends ChannelInboundHandlerAdap
                         consumeMsgCommand.partitionsIdx(),
                         consumeMsgCommand.offset());
 
-                ctx.writeAndFlush(new ConsumeMessageCommandResponse("key-fake", "fake-value", 200));
+                StringTopicMessage msgFromTopic =
+                        logStorage.getMessage(
+                                consumeMsgCommand.topicName(),
+                                consumeMsgCommand.partitionsIdx(),
+                                consumeMsgCommand.offset());
+
+                // message for specified triplet <topic, partition, offset> wasn't found
+                if (msgFromTopic == null) {
+                    ctx.writeAndFlush(new ConsumeMessageCommandResponse(null, null, 500));
+                }
+
+                ctx.writeAndFlush(
+                        new ConsumeMessageCommandResponse(
+                                msgFromTopic.key(), msgFromTopic.value(), 200));
             } finally {
                 ReferenceCountUtil.release(msg);
             }

@@ -54,6 +54,9 @@ public final class SimpleClientScenario {
                             "Message received key = '%s', value = '%s'%n",
                             consumeMsgResp.key(), consumeMsgResp.value());
                 }
+                else {
+                    System.err.printf("Consume message failed for topic '%s' and partition idx '%d'%n", topicName, parIdx);
+                }
             }
         }
     }
