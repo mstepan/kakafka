@@ -8,13 +8,13 @@ import java.nio.file.Path;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Objects;
-import java.util.concurrent.locks.Lock;
-import java.util.concurrent.locks.ReentrantLock;
 
-/** There should be ONE LogStorage associated with main broker process. */
+/*
+* There should be ONE LogStorage associated with main broker process.
+* All public method from this class should be threads safe b/c will be executed by multiple threads.
+* Rigth now we will just use 'synchronized' keyword for simplicity.
+*/
 public final class LogStorage {
-
-    private final Lock globalStorageLock = new ReentrantLock();
 
     private final BrokerConfig config;
 
@@ -27,25 +27,24 @@ public final class LogStorage {
         this.brokerDataFolder = Path.of(config.dataFolder(), config.brokerName());
     }
 
-    public void init() {
-        IOUtils.createFolderIfNotExist(config.brokerName(), brokerDataFolder);
-    }
-
     /*
      * Write to local broker FS. Append message to end of write-ahead log (WAL) and update index file properly.
      */
-    public void appendMessage(String topicName, int partitionIdx, StringTopicMessage msg) {
-        globalStorageLock.lock();
-        try {
-            PartitionFile partitionFile = getPartitionFile(topicName, partitionIdx, true);
-            partitionFile.appendMessage(msg);
-        } finally {
-            globalStorageLock.unlock();
-        }
+    public synchronized void appendMessage(
+            String topicName, int partitionIdx, StringTopicMessage msg) {
+
+        // Create broker data folder lazily during first append operation
+        IOUtils.createFolderIfNotExist(config.brokerName(), brokerDataFolder);
+
+        PartitionFile partitionFile = getPartitionFile(topicName, partitionIdx, true);
+        partitionFile.appendMessage(msg);
     }
 
-    /** Read message identified by triplet <topic name, partition index, message offset>. */
-    public StringTopicMessage getMessage(String topicName, int partitionIdx, int msgIdx) {
+    /*
+     * Read message identified by triplet <topic name, partition index, message offset>.
+     */
+    public synchronized StringTopicMessage getMessage(
+            String topicName, int partitionIdx, int msgIdx) {
         PartitionFile partitionFile = getPartitionFile(topicName, partitionIdx, false);
 
         if (partitionFile == null) {
@@ -69,26 +68,27 @@ public final class LogStorage {
             return partitionFileFromCache;
         }
 
-        TopicPartitionFS topicPartitionFS = getTopicAndPartitionFileSystem(topicName, partitionIdx);
+        TopicPartitionPaths topicPartitionPaths = constructPartitionPaths(topicName, partitionIdx);
 
         if (createIfNotExist) {
-            if (!IOUtils.exist(topicPartitionFS.logFilePath())) {
-                IOUtils.createFileIfNotExist(topicPartitionFS.logFilePath());
+            if (!IOUtils.exist(topicPartitionPaths.logFilePath())) {
+                IOUtils.createFileIfNotExist(topicPartitionPaths.logFilePath());
             }
 
-            if (!IOUtils.exist(topicPartitionFS.indexFilePath())) {
-                IOUtils.createFileIfNotExist(topicPartitionFS.indexFilePath());
+            if (!IOUtils.exist(topicPartitionPaths.indexFilePath())) {
+                IOUtils.createFileIfNotExist(topicPartitionPaths.indexFilePath());
             }
         }
 
-        if (!IOUtils.exist(topicPartitionFS.logFilePath())
-                || !IOUtils.exist(topicPartitionFS.indexFilePath())) {
+        if (!IOUtils.exist(topicPartitionPaths.logFilePath())
+                || !IOUtils.exist(topicPartitionPaths.indexFilePath())) {
             return null;
         }
 
-        RandomWritableFile writableLogFile = new RandomWritableFile(topicPartitionFS.logFilePath());
+        RandomWritableFile writableLogFile =
+                new RandomWritableFile(topicPartitionPaths.logFilePath());
         RandomWritableFile writableIndexFile =
-                new RandomWritableFile(topicPartitionFS.indexFilePath());
+                new RandomWritableFile(topicPartitionPaths.indexFilePath());
 
         PartitionFile partitionFile = new PartitionFile(writableLogFile, writableIndexFile);
 
@@ -105,7 +105,7 @@ public final class LogStorage {
     /**
      * Construct full path to log file and index file using provided 'topicName' and 'partitionIdx'.
      */
-    private TopicPartitionFS getTopicAndPartitionFileSystem(String topicName, int partitionIdx) {
+    private TopicPartitionPaths constructPartitionPaths(String topicName, int partitionIdx) {
         final Path topicFolder = Path.of(brokerDataFolder.toString(), topicName);
 
         final Path partitionFolder =
@@ -118,6 +118,6 @@ public final class LogStorage {
         final Path indexFilePath =
                 Path.of(partitionFolder.toString(), "%010d.index".formatted(lastMessageIdx));
 
-        return new TopicPartitionFS(logFilePath, indexFilePath);
+        return new TopicPartitionPaths(logFilePath, indexFilePath);
     }
 }

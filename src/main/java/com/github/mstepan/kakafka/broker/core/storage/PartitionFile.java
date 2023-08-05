@@ -15,14 +15,13 @@ public final class PartitionFile {
         this.index = index;
     }
 
-    public void appendMessage(StringTopicMessage msg){
+    public void appendMessage(StringTopicMessage msg) {
 
         MessageStreamStatus fileStreamStatus = getStreamStatus();
 
         long newOffset = log.appendKeyAndValue(msg.key(), msg.value());
 
-        index.appendMessageOffset(
-                fileStreamStatus.msgIdx(), fileStreamStatus.fileOffset());
+        index.appendMessageOffset(fileStreamStatus.msgIdx(), fileStreamStatus.fileOffset());
 
         streamStatus = new MessageStreamStatus(fileStreamStatus.msgIdx() + 1, newOffset);
     }

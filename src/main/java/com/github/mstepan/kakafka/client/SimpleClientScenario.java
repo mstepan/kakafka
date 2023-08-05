@@ -4,7 +4,6 @@ import com.github.mstepan.kakafka.broker.core.MetadataState;
 import com.github.mstepan.kakafka.broker.core.StringTopicMessage;
 import com.github.mstepan.kakafka.broker.core.topic.TopicInfo;
 import com.github.mstepan.kakafka.broker.core.topic.TopicPartitionInfo;
-import com.github.mstepan.kakafka.command.response.ConsumeMessageCommandResponse;
 import com.github.mstepan.kakafka.command.response.CreateTopicCommandResponse;
 import com.github.mstepan.kakafka.command.response.MetadataCommandResponse;
 import java.util.Optional;
@@ -36,7 +35,7 @@ public final class SimpleClientScenario {
 
             ThreadLocalRandom rand = ThreadLocalRandom.current();
 
-            for (int i = 0; i < 3; ++i) {
+            for (int i = 0; i < 100; ++i) {
                 final String key = "key-123";
                 final String value =
                         "value-%d-%d".formatted(rand.nextInt(1000), rand.nextInt(1000));
@@ -45,22 +44,23 @@ public final class SimpleClientScenario {
                 client.pushMessage(topicName, new StringTopicMessage(key, value));
             }
 
-            for (int parIdx = 0;
-                    parIdx < KakafkaClient.DEFAULT_PARTITIONS_COUNT_PER_TOPIC;
-                    ++parIdx) {
-                ConsumeMessageCommandResponse consumeMsgResp =
-                        client.consumeMessage(topicName, parIdx, 0);
-
-                if (consumeMsgResp.status() == 200) {
-                    System.out.printf(
-                            "Message received key = '%s', value = '%s'%n",
-                            consumeMsgResp.key(), consumeMsgResp.value());
-                } else {
-                    System.err.printf(
-                            "Consume message failed for topic '%s' and partition idx '%d'%n",
-                            topicName, parIdx);
-                }
-            }
+            //            for (int parIdx = 0;
+            //                    parIdx < KakafkaClient.DEFAULT_PARTITIONS_COUNT_PER_TOPIC;
+            //                    ++parIdx) {
+            //                ConsumeMessageCommandResponse consumeMsgResp =
+            //                        client.consumeMessage(topicName, parIdx, 0);
+            //
+            //                if (consumeMsgResp.status() == 200) {
+            //                    System.out.printf(
+            //                            "Message received key = '%s', value = '%s'%n",
+            //                            consumeMsgResp.key(), consumeMsgResp.value());
+            //                } else {
+            //                    System.err.printf(
+            //                            "Consume message failed for topic '%s' and partition idx
+            // '%d'%n",
+            //                            topicName, parIdx);
+            //                }
+            //            }
         }
     }
 

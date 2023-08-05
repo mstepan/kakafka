@@ -64,7 +64,6 @@ public final class BrokerMain {
                         nameFac.generateBrokerName(), getPort(), "http://localhost:2379", "./data");
         final MetadataStorage metadataStorage = new MetadataStorage();
         final LogStorage logStorage = new LogStorage(config);
-        logStorage.init();
 
         // jetcd 'Client' and all client classes, like `KV` are thread safe,
         // so we can use one instance per broker.
