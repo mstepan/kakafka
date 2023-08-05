@@ -31,13 +31,13 @@ public final class ConsumeMessageServerHandler extends ChannelInboundHandlerAdap
                         brokerName,
                         consumeMsgCommand.topicName(),
                         consumeMsgCommand.partitionsIdx(),
-                        consumeMsgCommand.offset());
+                        consumeMsgCommand.msgIndex());
 
                 StringTopicMessage msgFromTopic =
                         logStorage.getMessage(
                                 consumeMsgCommand.topicName(),
                                 consumeMsgCommand.partitionsIdx(),
-                                consumeMsgCommand.offset());
+                                consumeMsgCommand.msgIndex());
 
                 // message for specified triplet <topic, partition, offset> wasn't found
                 if (msgFromTopic == null) {

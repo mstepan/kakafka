@@ -9,10 +9,10 @@ import com.github.mstepan.kakafka.command.response.GetTopicInfoCommandResponse;
 import java.util.Optional;
 import org.junit.jupiter.api.Test;
 
-public class GetTopicInfoIntTest {
+final class GetTopicInfoIntTest {
 
     @Test
-    public void getExistingTopicInfo() {
+    void getExistingTopicInfo() {
         try (KakafkaClient client = new KakafkaClient()) {
 
             final String topicName = "topic-" + System.currentTimeMillis();
@@ -34,7 +34,7 @@ public class GetTopicInfoIntTest {
     }
 
     @Test
-    public void getTopicInfoForNotExistedTopicShouldFail() {
+    void getTopicInfoForNotExistedTopicShouldFail() {
         try (KakafkaClient client = new KakafkaClient()) {
 
             final String topicName = "topic-not-existed-" + System.currentTimeMillis();

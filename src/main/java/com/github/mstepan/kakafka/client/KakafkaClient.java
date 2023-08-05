@@ -248,7 +248,7 @@ public final class KakafkaClient implements AutoCloseable {
 
     /** Consumers read by default from the broker that is the leader for a given partition. */
     public ConsumeMessageCommandResponse consumeMessage(
-            String topicName, int partitionIdx, int offset) {
+            String topicName, int partitionIdx, int msgIndex) {
 
         LiveBroker topicPartitionLeader = getTopicAndPartitionLeader(topicName, partitionIdx);
 
@@ -261,7 +261,7 @@ public final class KakafkaClient implements AutoCloseable {
 
             DataIn in = DataIn.fromStandardStream(dataIn);
 
-            sendCommand(new ConsumeMessageCommand(topicName, partitionIdx, offset), dataOut);
+            sendCommand(new ConsumeMessageCommand(topicName, partitionIdx, msgIndex), dataOut);
             return (ConsumeMessageCommandResponse) CommandResponseDecoder.decode(in);
         } catch (IOException ioEx) {
             throw new IllegalStateException(ioEx);

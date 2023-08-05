@@ -1,3 +1,3 @@
 package com.github.mstepan.kakafka.broker.wal;
 
-public record MessageIndexAndOffset(long msgIdx, long fileOffset) {}
+public record MessageIndexAndOffset(int msgIdx, long fileOffset) {}

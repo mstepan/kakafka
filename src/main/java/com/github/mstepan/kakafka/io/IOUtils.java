@@ -2,11 +2,16 @@ package com.github.mstepan.kakafka.io;
 
 import java.io.File;
 import java.io.IOException;
+import java.io.RandomAccessFile;
 import java.net.Socket;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.attribute.PosixFilePermission;
+import java.util.Comparator;
+import java.util.List;
 import java.util.Set;
+import java.util.stream.Collectors;
+import java.util.stream.Stream;
 
 public final class IOUtils {
 
@@ -16,11 +21,10 @@ public final class IOUtils {
 
     public static void createFolderIfNotExist(String brokerName, Path folderPath) {
         if (Files.notExists(folderPath)) {
-            try {
-                System.out.printf("[%s]Creating folder '%s'%n", brokerName, folderPath);
-                Files.createDirectory(folderPath);
-            } catch (IOException ioEx) {
-                throw new IllegalStateException(ioEx);
+            System.out.printf("[%s]Creating folder '%s'%n", brokerName, folderPath);
+            boolean folderCreated = folderPath.toFile().mkdirs();
+            if (!folderCreated) {
+                throw new IllegalStateException("Can't create folder '%s'".formatted(folderPath));
             }
         } else {
             System.out.printf("[%s]Using existing '%s' folder%n", brokerName, folderPath);
@@ -80,5 +84,69 @@ public final class IOUtils {
     /** Check if specified file or folder exist. */
     public static boolean exist(Path path) {
         return Files.exists(path);
+    }
+
+    public static long length(RandomAccessFile file) {
+        try {
+            return file.length();
+        } catch (IOException ioEx) {
+            throw new IllegalStateException(ioEx);
+        }
+    }
+
+    public static void seek(RandomAccessFile file, long offset) {
+
+        Preconditions.checkArgument(file != null, "null 'file' parameter detected");
+
+        final long fileLength = length(file);
+
+        Preconditions.checkArgument(
+                offset >= 0 && offset <= fileLength,
+                "incorrect offset value offset = %d, should be in range [%d, %d]"
+                        .formatted(offset, 0, fileLength));
+        try {
+            file.seek(offset);
+        } catch (IOException ioEx) {
+            throw new IllegalStateException(ioEx);
+        }
+    }
+
+    /**
+     * Delete folder or file identified by 'path' parameter if exists. All intermediate folders and
+     * files will be also deleted.
+     *
+     * <p>Algorithm explained:
+     *
+     * <p>1. Get all sub-folders and files.
+     *
+     * <p>2. Sort in reverse older, so that files appear first.
+     *
+     * <p>3. Delete all files, sub-folders and folders in reverse order.
+     */
+    public static void delete(String path) {
+        try {
+
+            Path pathToDelete = Path.of(path);
+
+            if (!pathToDelete.toFile().exists()) {
+                return;
+            }
+
+            try (Stream<Path> pathStream = Files.walk(pathToDelete)) {
+                pathStream
+                        .sorted(Comparator.reverseOrder())
+                        .map(Path::toFile)
+                        .forEach(
+                                file -> {
+                                    boolean wasDeleted = file.delete();
+                                    if (!wasDeleted) {
+                                        throw new IllegalStateException(
+                                                "Can't delete file or folder '%s'".formatted(file));
+                                    }
+                                });
+            }
+        } catch (IOException ioEx) {
+            throw new IllegalStateException(ioEx);
+        }
     }
 }

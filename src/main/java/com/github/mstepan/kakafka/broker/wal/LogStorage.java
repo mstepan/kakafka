@@ -33,28 +33,41 @@ public final class LogStorage {
     }
 
     /*
-     * Write to local broker FS. Append message to end of write-ahead log (WAL).
+     * Write to local broker FS. Append message to end of write-ahead log (WAL) and update index file properly.
      */
     public void appendMessage(String topicName, int partitionIdx, StringTopicMessage msg) {
         globalStorageLock.lock();
         try {
-            PartitionFile partitionFile = getPartitionFile(topicName, partitionIdx);
+            PartitionFile partitionFile = getPartitionFile(topicName, partitionIdx, true);
 
             MessageIndexAndOffset lastMsgIdx = partitionFile.lastMessageIdxAndOffset();
 
             RandomWritableFile writableLogFile = partitionFile.log();
-            long newOffset = writableLogFile.appendKeyValue(msg.key(), msg.value());
+            long newOffset = writableLogFile.appendKeyAndValue(msg.key(), msg.value());
 
             RandomWritableFile writableIndexFile = partitionFile.index();
-            writableIndexFile.appendMessageOffset(lastMsgIdx.msgIdx() + 1L, newOffset);
+            writableIndexFile.appendMessageOffset(lastMsgIdx.msgIdx() + 1, newOffset);
 
-            partitionFile.updateLastMessageIdxAndOffset(lastMsgIdx.msgIdx() + 1L, newOffset);
+            partitionFile.updateLastMessageIdxAndOffset(lastMsgIdx.msgIdx() + 1, newOffset);
         } finally {
             globalStorageLock.unlock();
         }
     }
 
-    private PartitionFile getPartitionFile(String topicName, int partitionIdx) {
+    /** Read message identified by triplet <topic name, partition index, message offset>. */
+    public StringTopicMessage getMessage(String topicName, int partitionIdx, int msgIdx) {
+        PartitionFile partitionFile = getPartitionFile(topicName, partitionIdx, false);
+
+        if (partitionFile == null) {
+            // partition file not found, so can't read message
+            return null;
+        }
+
+        return partitionFile.readMessage(msgIdx);
+    }
+
+    private PartitionFile getPartitionFile(
+            String topicName, int partitionIdx, boolean createIfNotExist) {
 
         final String topicAndPartitionKey = "%s/%d".formatted(topicName, partitionIdx);
 
@@ -66,12 +79,19 @@ public final class LogStorage {
 
         TopicPartitionFS topicPartitionFS = getTopicAndPartitionFileSystem(topicName, partitionIdx);
 
-        if (!IOUtils.exist(topicPartitionFS.logFilePath())) {
-            IOUtils.createFileIfNotExist(topicPartitionFS.logFilePath());
+        if (createIfNotExist) {
+            if (!IOUtils.exist(topicPartitionFS.logFilePath())) {
+                IOUtils.createFileIfNotExist(topicPartitionFS.logFilePath());
+            }
+
+            if (!IOUtils.exist(topicPartitionFS.indexFilePath())) {
+                IOUtils.createFileIfNotExist(topicPartitionFS.indexFilePath());
+            }
         }
 
-        if (!IOUtils.exist(topicPartitionFS.indexFilePath())) {
-            IOUtils.createFileIfNotExist(topicPartitionFS.indexFilePath());
+        if (!IOUtils.exist(topicPartitionFS.logFilePath())
+                || !IOUtils.exist(topicPartitionFS.indexFilePath())) {
+            return null;
         }
 
         RandomWritableFile writableLogFile = new RandomWritableFile(topicPartitionFS.logFilePath());
@@ -103,9 +123,5 @@ public final class LogStorage {
                 Path.of(partitionFolder.toString(), "%010d.index".formatted(lastMessageIdx));
 
         return new TopicPartitionFS(logFilePath, indexFilePath);
-    }
-
-    public StringTopicMessage getMessage(String topicName, int partitionIdx, long offset) {
-        return null;
     }
 }

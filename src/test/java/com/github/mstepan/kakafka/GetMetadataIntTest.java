@@ -11,10 +11,10 @@ import com.github.mstepan.kakafka.command.response.MetadataCommandResponse;
 import java.util.Optional;
 import org.junit.jupiter.api.Test;
 
-public class GetMetadataIntTest {
+final class GetMetadataIntTest {
 
     @Test
-    public void getMetadataNormalCase() {
+    void getMetadataNormalCase() {
         try (KakafkaClient client = new KakafkaClient()) {
 
             Optional<MetadataCommandResponse> maybeMetadataResponse = client.getMetadata();

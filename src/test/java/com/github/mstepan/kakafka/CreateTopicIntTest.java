@@ -12,7 +12,7 @@ import java.util.List;
 import java.util.Optional;
 import org.junit.jupiter.api.Test;
 
-public class CreateTopicIntTest {
+final class CreateTopicIntTest {
 
     @Test
     public void createNewTopic() {
@@ -55,7 +55,7 @@ public class CreateTopicIntTest {
     }
 
     @Test
-    public void createAlreadyExistingTopicShouldFail() {
+    void createAlreadyExistingTopicShouldFail() {
         try (KakafkaClient client = new KakafkaClient()) {
 
             final String topicName = "topic-" + System.currentTimeMillis();

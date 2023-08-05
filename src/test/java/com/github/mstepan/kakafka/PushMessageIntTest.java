@@ -10,10 +10,10 @@ import com.github.mstepan.kakafka.command.response.PushMessageCommandResponse;
 import java.util.Optional;
 import org.junit.jupiter.api.Test;
 
-public class PushMessageIntTest {
+final class PushMessageIntTest {
 
     @Test
-    public void pushMessageExistingTopic() {
+    void pushMessageExistingTopic() {
         try (KakafkaClient client = new KakafkaClient()) {
 
             final String topicName = "topic-" + System.currentTimeMillis();
@@ -45,7 +45,7 @@ public class PushMessageIntTest {
     }
 
     @Test
-    public void pushMessageNotExistedTopicShouldFail() {
+    void pushMessageNotExistedTopicShouldFail() {
         try (KakafkaClient client = new KakafkaClient()) {
 
             final String topicName = "topic-not-exists-push-" + System.currentTimeMillis();
