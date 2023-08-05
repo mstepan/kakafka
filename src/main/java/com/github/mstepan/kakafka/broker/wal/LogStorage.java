@@ -40,15 +40,16 @@ public final class LogStorage {
         try {
             PartitionFile partitionFile = getPartitionFile(topicName, partitionIdx, true);
 
-            MessageIndexAndOffset lastMsgIdx = partitionFile.lastMessageIdxAndOffset();
+            MessageStreamStatus fileStreamStatus = partitionFile.streamStatus();
 
             RandomWritableFile writableLogFile = partitionFile.log();
             long newOffset = writableLogFile.appendKeyAndValue(msg.key(), msg.value());
 
             RandomWritableFile writableIndexFile = partitionFile.index();
-            writableIndexFile.appendMessageOffset(lastMsgIdx.msgIdx() + 1, newOffset);
+            writableIndexFile.appendMessageOffset(
+                    fileStreamStatus.msgIdx(), fileStreamStatus.fileOffset());
 
-            partitionFile.updateLastMessageIdxAndOffset(lastMsgIdx.msgIdx() + 1, newOffset);
+            partitionFile.updateStreamStatus(fileStreamStatus.msgIdx() + 1, newOffset);
         } finally {
             globalStorageLock.unlock();
         }

@@ -9,7 +9,7 @@ REMOTE_DEBUGGER=-agentlib:jdwp=transport=dt_socket,server=y,suspend=n,address=50
 # Print JVM memory details when process exit
 #NATIVE_MEMORY_TRACKER="-XX:+UnlockDiagnosticVMOptions -XX:NativeMemoryTracking=summary -XX:+PrintNMTStatistics"
 
-cluster_mode=false
+cluster_mode=true
 NODES_CNT=3
 
 echo "Removing all files from data folder './data'"

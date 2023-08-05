@@ -1,8 +1,7 @@
 package com.github.mstepan.kakafka.io;
 
 import com.github.mstepan.kakafka.broker.core.StringTopicMessage;
-import com.github.mstepan.kakafka.broker.wal.MessageIndexAndOffset;
-
+import com.github.mstepan.kakafka.broker.wal.MessageStreamStatus;
 import java.io.File;
 import java.io.IOException;
 import java.io.RandomAccessFile;
@@ -56,7 +55,7 @@ public final class RandomWritableFile {
 
     private static final long IDX_AND_FILE_OFFSET_SIZE_IN_BYTES = 2 * Long.BYTES;
 
-    public MessageIndexAndOffset readLastMessageIndexAndOffset() {
+    public MessageStreamStatus readLastMessageIndexAndOffset() {
         try {
             if (randomAccessFile.length() == 0L) {
                 return null;
@@ -66,7 +65,7 @@ public final class RandomWritableFile {
 
             int msgIdx = randomAccessFile.readInt();
             long fileOffset = randomAccessFile.readLong();
-            return new MessageIndexAndOffset(msgIdx, fileOffset);
+            return new MessageStreamStatus(msgIdx, fileOffset);
         } catch (IOException ioEx) {
             throw new IllegalStateException(ioEx);
         }
@@ -80,7 +79,7 @@ public final class RandomWritableFile {
         IOUtils.seek(randomAccessFile, IOUtils.length(randomAccessFile));
     }
 
-    public MessageIndexAndOffset findMessageOffset(int msgIdx) {
+    public MessageStreamStatus findMessageOffset(int msgIdx) {
         try {
             long fileOffset = 0L;
 
@@ -92,7 +91,7 @@ public final class RandomWritableFile {
                 fileOffset += (Integer.BYTES + Long.BYTES);
 
                 if (curMsgIdx == msgIdx) {
-                    return new MessageIndexAndOffset(msgIdx, curOffset);
+                    return new MessageStreamStatus(msgIdx, curOffset);
                 }
             }
 

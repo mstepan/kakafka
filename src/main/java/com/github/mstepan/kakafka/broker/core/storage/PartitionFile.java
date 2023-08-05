@@ -1,7 +1,7 @@
 package com.github.mstepan.kakafka.broker.core.storage;
 
 import com.github.mstepan.kakafka.broker.core.StringTopicMessage;
-import com.github.mstepan.kakafka.broker.wal.MessageIndexAndOffset;
+import com.github.mstepan.kakafka.broker.wal.MessageStreamStatus;
 import com.github.mstepan.kakafka.io.RandomWritableFile;
 
 public final class PartitionFile {
@@ -9,7 +9,7 @@ public final class PartitionFile {
     private final RandomWritableFile log;
     private final RandomWritableFile index;
 
-    private volatile MessageIndexAndOffset lastMsgIdx;
+    private volatile MessageStreamStatus lastMsgIdx;
 
     public PartitionFile(RandomWritableFile log, RandomWritableFile index) {
         this.log = log;
@@ -24,27 +24,27 @@ public final class PartitionFile {
         return log;
     }
 
-    public MessageIndexAndOffset lastMessageIdxAndOffset() {
+    public MessageStreamStatus streamStatus() {
         if (lastMsgIdx == null) {
             lastMsgIdx = index.readLastMessageIndexAndOffset();
 
             if (lastMsgIdx == null) {
-                lastMsgIdx = new MessageIndexAndOffset(0, 0);
+                lastMsgIdx = MessageStreamStatus.START;
             }
         }
 
         return lastMsgIdx;
     }
 
-    public void updateLastMessageIdxAndOffset(int msgIdx, long fileOffset) {
-        lastMsgIdx = new MessageIndexAndOffset(msgIdx, fileOffset);
+    public void updateStreamStatus(int msgIdx, long fileOffset) {
+        lastMsgIdx = new MessageStreamStatus(msgIdx, fileOffset);
     }
 
     /** Read index file to find the mapping between 'message idx' => 'log file offset' */
     public StringTopicMessage readMessage(int msgIdx) {
         try {
             index.moveToStart();
-            MessageIndexAndOffset idxAndOffset = index.findMessageOffset(msgIdx);
+            MessageStreamStatus idxAndOffset = index.findMessageOffset(msgIdx);
 
             if (idxAndOffset != null) {
                 try {
