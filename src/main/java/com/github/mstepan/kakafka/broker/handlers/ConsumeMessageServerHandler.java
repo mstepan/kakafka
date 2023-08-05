@@ -42,11 +42,11 @@ public final class ConsumeMessageServerHandler extends ChannelInboundHandlerAdap
                 // message for specified triplet <topic, partition, offset> wasn't found
                 if (msgFromTopic == null) {
                     ctx.writeAndFlush(new ConsumeMessageCommandResponse(null, null, 500));
+                } else {
+                    ctx.writeAndFlush(
+                            new ConsumeMessageCommandResponse(
+                                    msgFromTopic.key(), msgFromTopic.value(), 200));
                 }
-
-                ctx.writeAndFlush(
-                        new ConsumeMessageCommandResponse(
-                                msgFromTopic.key(), msgFromTopic.value(), 200));
             } finally {
                 ReferenceCountUtil.release(msg);
             }

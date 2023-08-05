@@ -10,10 +10,10 @@ import java.util.Map;
 import java.util.Objects;
 
 /*
-* There should be ONE LogStorage associated with main broker process.
-* All public method from this class should be threads safe b/c will be executed by multiple threads.
-* Rigth now we will just use 'synchronized' keyword for simplicity.
-*/
+ * There should be ONE LogStorage associated with main broker process.
+ * All public method from this class should be threads safe b/c will be executed by multiple threads.
+ * Rigth now we will just use 'synchronized' keyword for simplicity.
+ */
 public final class LogStorage {
 
     private final BrokerConfig config;
