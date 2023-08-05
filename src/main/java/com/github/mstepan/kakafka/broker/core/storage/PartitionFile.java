@@ -8,35 +8,35 @@ public final class PartitionFile {
     private final RandomWritableFile log;
     private final RandomWritableFile index;
 
-    private volatile MessageStreamStatus lastMsgIdx;
+    private volatile MessageStreamStatus streamStatus;
 
     public PartitionFile(RandomWritableFile log, RandomWritableFile index) {
         this.log = log;
         this.index = index;
     }
 
-    public RandomWritableFile index() {
-        return index;
+    public void appendMessage(StringTopicMessage msg){
+
+        MessageStreamStatus fileStreamStatus = getStreamStatus();
+
+        long newOffset = log.appendKeyAndValue(msg.key(), msg.value());
+
+        index.appendMessageOffset(
+                fileStreamStatus.msgIdx(), fileStreamStatus.fileOffset());
+
+        streamStatus = new MessageStreamStatus(fileStreamStatus.msgIdx() + 1, newOffset);
     }
 
-    public RandomWritableFile log() {
-        return log;
-    }
+    public MessageStreamStatus getStreamStatus() {
+        if (streamStatus == null) {
+            streamStatus = index.readLastMessageIndexAndOffset();
 
-    public MessageStreamStatus streamStatus() {
-        if (lastMsgIdx == null) {
-            lastMsgIdx = index.readLastMessageIndexAndOffset();
-
-            if (lastMsgIdx == null) {
-                lastMsgIdx = MessageStreamStatus.START;
+            if (streamStatus == null) {
+                streamStatus = MessageStreamStatus.START;
             }
         }
 
-        return lastMsgIdx;
-    }
-
-    public void updateStreamStatus(int msgIdx, long fileOffset) {
-        lastMsgIdx = new MessageStreamStatus(msgIdx, fileOffset);
+        return streamStatus;
     }
 
     /** Read index file to find the mapping between 'message idx' => 'log file offset' */

@@ -11,6 +11,7 @@ import java.util.Objects;
 import java.util.concurrent.locks.Lock;
 import java.util.concurrent.locks.ReentrantLock;
 
+/** There should be ONE LogStorage associated with main broker process. */
 public final class LogStorage {
 
     private final Lock globalStorageLock = new ReentrantLock();
@@ -19,7 +20,7 @@ public final class LogStorage {
 
     private final Path brokerDataFolder;
 
-    private final Map<String, PartitionFile> topicAndPartitionToFile = new HashMap<>();
+    private final Map<String, PartitionFile> topicPartitionFileCache = new HashMap<>();
 
     public LogStorage(BrokerConfig config) {
         this.config = Objects.requireNonNull(config, "null 'config' detected");
@@ -37,17 +38,7 @@ public final class LogStorage {
         globalStorageLock.lock();
         try {
             PartitionFile partitionFile = getPartitionFile(topicName, partitionIdx, true);
-
-            MessageStreamStatus fileStreamStatus = partitionFile.streamStatus();
-
-            RandomWritableFile writableLogFile = partitionFile.log();
-            long newOffset = writableLogFile.appendKeyAndValue(msg.key(), msg.value());
-
-            RandomWritableFile writableIndexFile = partitionFile.index();
-            writableIndexFile.appendMessageOffset(
-                    fileStreamStatus.msgIdx(), fileStreamStatus.fileOffset());
-
-            partitionFile.updateStreamStatus(fileStreamStatus.msgIdx() + 1, newOffset);
+            partitionFile.appendMessage(msg);
         } finally {
             globalStorageLock.unlock();
         }
@@ -68,12 +59,14 @@ public final class LogStorage {
     private PartitionFile getPartitionFile(
             String topicName, int partitionIdx, boolean createIfNotExist) {
 
-        final String topicAndPartitionKey = "%s/%d".formatted(topicName, partitionIdx);
+        final String topicAndPartitionKey = topicAndPartitionKey(topicName, partitionIdx);
 
-        if (topicAndPartitionToFile.containsKey(topicAndPartitionKey)) {
+        PartitionFile partitionFileFromCache = topicPartitionFileCache.get(topicAndPartitionKey);
+
+        if (partitionFileFromCache != null) {
             System.out.printf(
                     "[%s]Getting PartitionFile from in-memory hash%n", config.brokerName());
-            return topicAndPartitionToFile.get(topicAndPartitionKey);
+            return partitionFileFromCache;
         }
 
         TopicPartitionFS topicPartitionFS = getTopicAndPartitionFileSystem(topicName, partitionIdx);
@@ -100,9 +93,13 @@ public final class LogStorage {
         PartitionFile partitionFile = new PartitionFile(writableLogFile, writableIndexFile);
 
         System.out.printf("[%s]Saving PartitionFile in-memory%n", config.brokerName());
-        topicAndPartitionToFile.put(topicAndPartitionKey, partitionFile);
+        topicPartitionFileCache.put(topicAndPartitionKey, partitionFile);
 
         return partitionFile;
+    }
+
+    private static String topicAndPartitionKey(String topicName, int partitionIdx) {
+        return "%s/%d".formatted(topicName, partitionIdx);
     }
 
     /**
