@@ -1,4 +1,4 @@
-package com.github.mstepan.kakafka.broker.wal;
+package com.github.mstepan.kakafka.broker.core.storage;
 
 public record MessageStreamStatus(int msgIdx, long fileOffset) {
 

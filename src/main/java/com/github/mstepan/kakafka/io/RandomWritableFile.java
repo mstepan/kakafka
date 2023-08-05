@@ -1,7 +1,7 @@
 package com.github.mstepan.kakafka.io;
 
 import com.github.mstepan.kakafka.broker.core.StringTopicMessage;
-import com.github.mstepan.kakafka.broker.wal.MessageStreamStatus;
+import com.github.mstepan.kakafka.broker.core.storage.MessageStreamStatus;
 import java.io.File;
 import java.io.IOException;
 import java.io.RandomAccessFile;

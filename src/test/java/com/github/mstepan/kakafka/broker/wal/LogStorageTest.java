@@ -6,6 +6,7 @@ import static org.junit.jupiter.api.Assertions.assertNull;
 
 import com.github.mstepan.kakafka.broker.BrokerConfig;
 import com.github.mstepan.kakafka.broker.core.StringTopicMessage;
+import com.github.mstepan.kakafka.broker.core.storage.LogStorage;
 import com.github.mstepan.kakafka.io.IOUtils;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;

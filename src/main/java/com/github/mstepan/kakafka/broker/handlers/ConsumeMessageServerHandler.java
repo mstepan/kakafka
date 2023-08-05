@@ -1,7 +1,7 @@
 package com.github.mstepan.kakafka.broker.handlers;
 
 import com.github.mstepan.kakafka.broker.core.StringTopicMessage;
-import com.github.mstepan.kakafka.broker.wal.LogStorage;
+import com.github.mstepan.kakafka.broker.core.storage.LogStorage;
 import com.github.mstepan.kakafka.command.Command;
 import com.github.mstepan.kakafka.command.ConsumeMessageCommand;
 import com.github.mstepan.kakafka.command.response.ConsumeMessageCommandResponse;

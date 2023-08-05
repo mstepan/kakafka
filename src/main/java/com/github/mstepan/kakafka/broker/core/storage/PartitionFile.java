@@ -1,7 +1,6 @@
 package com.github.mstepan.kakafka.broker.core.storage;
 
 import com.github.mstepan.kakafka.broker.core.StringTopicMessage;
-import com.github.mstepan.kakafka.broker.wal.MessageStreamStatus;
 import com.github.mstepan.kakafka.io.RandomWritableFile;
 
 public final class PartitionFile {

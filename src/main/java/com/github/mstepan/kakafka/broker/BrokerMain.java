@@ -2,6 +2,7 @@ package com.github.mstepan.kakafka.broker;
 
 import com.github.mstepan.kakafka.broker.core.BrokerNameFactory;
 import com.github.mstepan.kakafka.broker.core.MetadataStorage;
+import com.github.mstepan.kakafka.broker.core.storage.LogStorage;
 import com.github.mstepan.kakafka.broker.etcd.EtcdClientHolder;
 import com.github.mstepan.kakafka.broker.etcd.KeepAliveAndLeaderElectionTask;
 import com.github.mstepan.kakafka.broker.etcd.LiveBrokersTrackerTask;
@@ -12,7 +13,6 @@ import com.github.mstepan.kakafka.broker.handlers.GetMetadataCommandServerHandle
 import com.github.mstepan.kakafka.broker.handlers.GetTopicInfoServerHandler;
 import com.github.mstepan.kakafka.broker.handlers.PushMessageServerHandler;
 import com.github.mstepan.kakafka.broker.utils.DaemonThreadFactory;
-import com.github.mstepan.kakafka.broker.wal.LogStorage;
 import com.github.mstepan.kakafka.command.CommandDecoder;
 import com.github.mstepan.kakafka.command.response.CommandResponseEncoder;
 import io.etcd.jetcd.Client;

@@ -45,7 +45,9 @@ public final class SimpleClientScenario {
                 client.pushMessage(topicName, new StringTopicMessage(key, value));
             }
 
-            for (int parIdx = 0; parIdx < KakafkaClient.DEFAULT_PARTITIONS_COUNT_PER_TOPIC; ++parIdx) {
+            for (int parIdx = 0;
+                    parIdx < KakafkaClient.DEFAULT_PARTITIONS_COUNT_PER_TOPIC;
+                    ++parIdx) {
                 ConsumeMessageCommandResponse consumeMsgResp =
                         client.consumeMessage(topicName, parIdx, 0);
 
