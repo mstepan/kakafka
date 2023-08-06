@@ -3,6 +3,7 @@ package com.github.mstepan.kakafka.broker.wal;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import com.github.mstepan.kakafka.broker.BrokerConfig;
 import com.github.mstepan.kakafka.broker.core.StringTopicMessage;
@@ -13,6 +14,8 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
 import java.sql.Time;
+import java.util.HashSet;
+import java.util.Set;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
@@ -146,8 +149,7 @@ final class LogStorageTest {
                                     logStorage.appendMessage(
                                             topicName,
                                             0,
-                                            new StringTopicMessage(
-                                                    msgKey, "value-%d".formatted(threadIdx)));
+                                            new StringTopicMessage(msgKey, "value-" + threadIdx));
                                 }
                             } finally {
                                 allCompleted.countDown();
@@ -160,13 +162,22 @@ final class LogStorageTest {
         } finally {
             pool.shutdownNow();
         }
+
+        final Set<String> expectedValues = new HashSet<>();
+
+        for (int thId = 0; thId < threadsCount; ++thId) {
+            expectedValues.add("value-" + thId);
+        }
+
         for (int msgIdx = 0; msgIdx < threadsCount * messagesPerThread; ++msgIdx) {
             StringTopicMessage msg = logStorage.getMessage(topicName, 0, msgIdx);
 
             assertNotNull(msg, "Can't retrieve message");
             assertEquals(msgKey, msg.key(), "Incorrect key for message");
-            //            assertEquals(expectedValue, actualMsg.value(), "Incorrect value for
-            // message");
+            assertTrue(
+                    expectedValues.contains(msg.value()),
+                    "Message value is not as expected, expected one of %s, found = '%s'"
+                            .formatted(expectedValues, msg.value()));
         }
     }
 }
