@@ -12,6 +12,7 @@ import com.github.mstepan.kakafka.broker.handlers.ExitCommandServerHandler;
 import com.github.mstepan.kakafka.broker.handlers.GetMetadataCommandServerHandler;
 import com.github.mstepan.kakafka.broker.handlers.GetTopicInfoServerHandler;
 import com.github.mstepan.kakafka.broker.handlers.PushMessageServerHandler;
+import com.github.mstepan.kakafka.broker.utils.BrokerMdcPropagator;
 import com.github.mstepan.kakafka.broker.utils.DaemonThreadFactory;
 import com.github.mstepan.kakafka.command.CommandDecoder;
 import com.github.mstepan.kakafka.command.response.CommandResponseEncoder;
@@ -38,11 +39,8 @@ import java.util.concurrent.Executors;
 import java.util.concurrent.ThreadLocalRandom;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.slf4j.MDC;
 
 public final class BrokerMain {
-
-    public static final String BROKER_NAME_MDC_KEY = "broker.name";
 
     private static final Logger LOG = LoggerFactory.getLogger(MethodHandles.lookup().lookupClass());
 
@@ -69,10 +67,7 @@ public final class BrokerMain {
         final BrokerNameFactory nameFac = new BrokerNameFactory();
         final String brokerName = nameFac.generateBrokerName();
 
-        MDC.put(BROKER_NAME_MDC_KEY, brokerName);
-
-        try {
-
+        try (BrokerMdcPropagator notUsed = new BrokerMdcPropagator(brokerName)) {
             final BrokerConfig config =
                     new BrokerConfig(brokerName, getPort(), "http://localhost:2379", "./data");
             final MetadataStorage metadataStorage = new MetadataStorage();
@@ -99,8 +94,6 @@ public final class BrokerMain {
                     new BrokerMain(brokerContext).run(getPort());
                 }
             }
-        } finally {
-            MDC.clear();
         }
     }
 
@@ -157,7 +150,7 @@ public final class BrokerMain {
                                     pipeline.addLast(
                                             "commandResponseEncoder", new CommandResponseEncoder());
 
-                                    pipeline.addLast("exitHandler", new ExitCommandServerHandler());
+                                    pipeline.addLast("exitHandler", new ExitCommandServerHandler(brokerCtx));
 
                                     pipeline.addLast(
                                             "getMetadataHandler",

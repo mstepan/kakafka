@@ -1,13 +1,12 @@
 package com.github.mstepan.kakafka.broker.handlers;
 
-import static com.github.mstepan.kakafka.broker.BrokerMain.BROKER_NAME_MDC_KEY;
-
 import com.github.mstepan.kakafka.broker.BrokerContext;
 import com.github.mstepan.kakafka.broker.core.Either;
 import com.github.mstepan.kakafka.broker.core.LiveBroker;
 import com.github.mstepan.kakafka.broker.core.MetadataStorage;
 import com.github.mstepan.kakafka.broker.core.topic.TopicInfo;
 import com.github.mstepan.kakafka.broker.core.topic.TopicPartitionInfo;
+import com.github.mstepan.kakafka.broker.utils.BrokerMdcPropagator;
 import com.github.mstepan.kakafka.broker.utils.EtcdUtils;
 import com.github.mstepan.kakafka.command.Command;
 import com.github.mstepan.kakafka.command.CreateTopicCommand;
@@ -23,7 +22,6 @@ import java.util.Iterator;
 import java.util.List;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.slf4j.MDC;
 
 public final class CreateTopicCommandServerHandler extends ChannelInboundHandlerAdapter {
 
@@ -42,8 +40,8 @@ public final class CreateTopicCommandServerHandler extends ChannelInboundHandler
 
         if (command instanceof CreateTopicCommand createTopicCommand) {
 
-            try {
-                MDC.put(BROKER_NAME_MDC_KEY, brokerCtx.config().brokerName());
+            try (BrokerMdcPropagator notUsed =
+                    new BrokerMdcPropagator(brokerCtx.config().brokerName())) {
 
                 LOG.info(
                         "'create_topic'command for topic '{}' with '{}' partitions",
@@ -65,8 +63,6 @@ public final class CreateTopicCommandServerHandler extends ChannelInboundHandler
                 } else {
                     ctx.writeAndFlush(new CreateTopicCommandResponse(null, 500));
                 }
-            } finally {
-                MDC.clear();
             }
         } else {
             ctx.fireChannelRead(msg);
@@ -75,8 +71,11 @@ public final class CreateTopicCommandServerHandler extends ChannelInboundHandler
 
     @Override
     public void exceptionCaught(ChannelHandlerContext ctx, Throwable ex) throws Exception {
-        ex.printStackTrace();
-        ctx.close();
+        try (BrokerMdcPropagator notUsed =
+                new BrokerMdcPropagator(brokerCtx.config().brokerName())) {
+            LOG.error("CreateTopic command failed", ex);
+            ctx.close();
+        }
     }
 
     /**

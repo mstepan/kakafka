@@ -2,8 +2,8 @@ package com.github.mstepan.kakafka.broker.etcd;
 
 import com.github.mstepan.kakafka.broker.BrokerConfig;
 import com.github.mstepan.kakafka.broker.BrokerContext;
-import com.github.mstepan.kakafka.broker.BrokerMain;
 import com.github.mstepan.kakafka.broker.core.LiveBroker;
+import com.github.mstepan.kakafka.broker.utils.BrokerMdcPropagator;
 import com.github.mstepan.kakafka.broker.utils.EtcdUtils;
 import io.etcd.jetcd.ByteSequence;
 import io.etcd.jetcd.KV;
@@ -23,7 +23,6 @@ import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.ExecutionException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.slf4j.MDC;
 
 /**
  * This task tracks live brokers in a separate thread and updates 'MetadataStorage.liveBrokers' map
@@ -46,10 +45,8 @@ public class LiveBrokersTrackerTask implements Runnable {
 
     @Override
     public void run() {
-
-        MDC.put(BrokerMain.BROKER_NAME_MDC_KEY, brokerCtx.config().brokerName());
-
-        try {
+        try (BrokerMdcPropagator notUsed =
+                new BrokerMdcPropagator(brokerCtx.config().brokerName())) {
             Thread.currentThread().setName("LiveBrokersTrackerTask");
             LOG.info("Live brokers tracker DEDICATED thread started");
 
@@ -77,8 +74,6 @@ public class LiveBrokersTrackerTask implements Runnable {
                     Thread.currentThread().interrupt();
                 }
             }
-        } finally {
-            MDC.clear();
         }
     }
 
@@ -136,16 +131,22 @@ public class LiveBrokersTrackerTask implements Runnable {
                 new Watch.Listener() {
                     @Override
                     public void onNext(WatchResponse watchResponse) {
-                        List<WatchEvent> events = watchResponse.getEvents();
 
-                        for (WatchEvent singleEvent : events) {
-                            if (singleEvent.getEventType() == WatchEvent.EventType.UNRECOGNIZED) {
-                                LOG.warn("UNRECOGNIZED event");
-                            } else {
-                                // PUT & DELETE only here
-                                if (!brokerNewEvents.offer(singleEvent)) {
-                                    LOG.error(
-                                            "Can't insert events into 'brokerNewEvents', queue is FULL.");
+                        try (BrokerMdcPropagator notUsed =
+                                new BrokerMdcPropagator(brokerCtx.config().brokerName())) {
+
+                            List<WatchEvent> events = watchResponse.getEvents();
+
+                            for (WatchEvent singleEvent : events) {
+                                if (singleEvent.getEventType()
+                                        == WatchEvent.EventType.UNRECOGNIZED) {
+                                    LOG.warn("UNRECOGNIZED event");
+                                } else {
+                                    // PUT & DELETE only here
+                                    if (!brokerNewEvents.offer(singleEvent)) {
+                                        LOG.error(
+                                                "Can't insert events into 'brokerNewEvents', queue is FULL.");
+                                    }
                                 }
                             }
                         }
@@ -153,10 +154,13 @@ public class LiveBrokersTrackerTask implements Runnable {
 
                     @Override
                     public void onError(Throwable ex) {
-                        LOG.error(
-                                "Error during watching events on etcd value '%s'"
-                                        .formatted(BROKER_KEY_PREFIX),
-                                ex);
+                        try (BrokerMdcPropagator notUsed =
+                                new BrokerMdcPropagator(brokerCtx.config().brokerName())) {
+                            LOG.error(
+                                    "Error during watching events on etcd value '%s'"
+                                            .formatted(BROKER_KEY_PREFIX),
+                                    ex);
+                        }
                     }
 
                     @Override

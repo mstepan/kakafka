@@ -1,10 +1,9 @@
 package com.github.mstepan.kakafka.broker.handlers;
 
-import static com.github.mstepan.kakafka.broker.BrokerMain.BROKER_NAME_MDC_KEY;
-
 import com.github.mstepan.kakafka.broker.BrokerContext;
 import com.github.mstepan.kakafka.broker.core.Either;
 import com.github.mstepan.kakafka.broker.core.topic.TopicInfo;
+import com.github.mstepan.kakafka.broker.utils.BrokerMdcPropagator;
 import com.github.mstepan.kakafka.broker.utils.EtcdUtils;
 import com.github.mstepan.kakafka.broker.utils.Preconditions;
 import com.github.mstepan.kakafka.command.Command;
@@ -20,7 +19,6 @@ import io.netty.util.ReferenceCountUtil;
 import java.lang.invoke.MethodHandles;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.slf4j.MDC;
 
 public final class GetTopicInfoServerHandler extends ChannelInboundHandlerAdapter {
 
@@ -39,10 +37,8 @@ public final class GetTopicInfoServerHandler extends ChannelInboundHandlerAdapte
         Command command = (Command) msg;
 
         if (command instanceof GetTopicInfoCommand topicInfoCommand) {
-
-            MDC.put(BROKER_NAME_MDC_KEY, brokerCtx.config().brokerName());
-
-            try {
+            try (BrokerMdcPropagator notUsed =
+                    new BrokerMdcPropagator(brokerCtx.config().brokerName())) {
                 LOG.info(
                         "'get topic info' command received for topic '{}'",
                         topicInfoCommand.topicName());
@@ -55,7 +51,6 @@ public final class GetTopicInfoServerHandler extends ChannelInboundHandlerAdapte
                     ctx.writeAndFlush(new GetTopicInfoCommandResponse(null, 500));
                 }
             } finally {
-                MDC.clear();
                 ReferenceCountUtil.release(msg);
             }
         } else {

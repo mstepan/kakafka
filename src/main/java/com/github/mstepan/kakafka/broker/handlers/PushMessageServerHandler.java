@@ -1,9 +1,8 @@
 package com.github.mstepan.kakafka.broker.handlers;
 
-import static com.github.mstepan.kakafka.broker.BrokerMain.BROKER_NAME_MDC_KEY;
-
 import com.github.mstepan.kakafka.broker.BrokerContext;
 import com.github.mstepan.kakafka.broker.core.storage.LogStorage;
+import com.github.mstepan.kakafka.broker.utils.BrokerMdcPropagator;
 import com.github.mstepan.kakafka.broker.utils.Preconditions;
 import com.github.mstepan.kakafka.command.Command;
 import com.github.mstepan.kakafka.command.PushMessageCommand;
@@ -14,7 +13,6 @@ import io.netty.util.ReferenceCountUtil;
 import java.lang.invoke.MethodHandles;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.slf4j.MDC;
 
 public final class PushMessageServerHandler extends ChannelInboundHandlerAdapter {
 
@@ -37,9 +35,7 @@ public final class PushMessageServerHandler extends ChannelInboundHandlerAdapter
         Command command = (Command) msg;
 
         if (command instanceof PushMessageCommand pushCommand) {
-            try {
-
-                MDC.put(BROKER_NAME_MDC_KEY, brokerName);
+            try (BrokerMdcPropagator notUsed = new BrokerMdcPropagator(brokerName)) {
 
                 LOG.info(
                         "'pushMessage' topic '{}', partition idx '{}', (key = '{}', value = '{}')",
@@ -53,7 +49,6 @@ public final class PushMessageServerHandler extends ChannelInboundHandlerAdapter
 
                 ctx.writeAndFlush(new PushMessageCommandResponse(200));
             } finally {
-                MDC.clear();
                 ReferenceCountUtil.release(msg);
             }
         } else {

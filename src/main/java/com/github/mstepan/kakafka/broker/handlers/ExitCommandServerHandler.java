@@ -1,5 +1,7 @@
 package com.github.mstepan.kakafka.broker.handlers;
 
+import com.github.mstepan.kakafka.broker.BrokerContext;
+import com.github.mstepan.kakafka.broker.utils.BrokerMdcPropagator;
 import com.github.mstepan.kakafka.command.Command;
 import com.github.mstepan.kakafka.command.ExitCommand;
 import com.github.mstepan.kakafka.command.response.ExitCommandResponse;
@@ -13,6 +15,12 @@ import org.slf4j.LoggerFactory;
 public final class ExitCommandServerHandler extends ChannelInboundHandlerAdapter {
 
     private static final Logger LOG = LoggerFactory.getLogger(MethodHandles.lookup().lookupClass());
+
+    private final String brokerName;
+
+    public ExitCommandServerHandler(BrokerContext brokerCtx) {
+        this.brokerName = brokerCtx.config().brokerName();
+    }
 
     @Override
     public void channelRead(ChannelHandlerContext ctx, Object msg) {
@@ -33,7 +41,11 @@ public final class ExitCommandServerHandler extends ChannelInboundHandlerAdapter
 
     @Override
     public void exceptionCaught(ChannelHandlerContext ctx, Throwable ex) {
-        ex.printStackTrace();
-        ctx.close();
+        try (BrokerMdcPropagator notUsed = new BrokerMdcPropagator(brokerName)) {
+            LOG.error("Exit command handler failed", ex);
+        }
+        finally {
+            ctx.close();
+        }
     }
 }

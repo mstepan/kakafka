@@ -2,8 +2,8 @@ package com.github.mstepan.kakafka.broker.etcd;
 
 import com.github.mstepan.kakafka.broker.BrokerConfig;
 import com.github.mstepan.kakafka.broker.BrokerContext;
-import com.github.mstepan.kakafka.broker.BrokerMain;
 import com.github.mstepan.kakafka.broker.core.MetadataStorage;
+import com.github.mstepan.kakafka.broker.utils.BrokerMdcPropagator;
 import com.github.mstepan.kakafka.broker.utils.EtcdUtils;
 import io.etcd.jetcd.ByteSequence;
 import io.etcd.jetcd.Election;
@@ -19,7 +19,6 @@ import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeUnit;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.slf4j.MDC;
 
 /**
  * LEADER ELECTION. This class participates in leader election. If current broker is selected as a
@@ -56,10 +55,10 @@ public final class KeepAliveAndLeaderElectionTask implements Runnable {
     @Override
     public void run() {
 
-        MDC.put(BrokerMain.BROKER_NAME_MDC_KEY, brokerCtx.config().brokerName());
+        try (BrokerMdcPropagator notUsed =
+                new BrokerMdcPropagator(brokerCtx.config().brokerName())) {
 
-        Thread.currentThread().setName("KeepAliveAndLeaderElectionTask");
-        try {
+            Thread.currentThread().setName("KeepAliveAndLeaderElectionTask");
             final Lease leaseClient = brokerCtx.etcdClientHolder().leaseClient();
             final KV kvClient = brokerCtx.etcdClientHolder().kvClient();
             final Election electionClient = brokerCtx.etcdClientHolder().electionClient();
@@ -115,8 +114,6 @@ public final class KeepAliveAndLeaderElectionTask implements Runnable {
             Thread.currentThread().interrupt();
         } catch (ExecutionException execEx) {
             execEx.printStackTrace();
-        } finally {
-            MDC.clear();
         }
     }
 
@@ -129,32 +126,38 @@ public final class KeepAliveAndLeaderElectionTask implements Runnable {
         @Override
         public void onNext(LeaderResponse leaderResponse) {
 
-            LOG.info("Leader notification received");
+            try (BrokerMdcPropagator notUsed = new BrokerMdcPropagator(brokerName)) {
+                LOG.info("Leader notification received");
 
-            KeyValue leaderKeyAndValue = leaderResponse.getKv();
+                KeyValue leaderKeyAndValue = leaderResponse.getKv();
 
-            /*
-            key = /kakafka/leader/694d895902aac425
-            value = broker-dbea19ad-aa1e-4b6c-8673-7c3fbc9a7755
-            */
-            LOG.info(
-                    "Leader selected, key = '{}', value = '{}'",
-                    leaderKeyAndValue.getKey(),
-                    leaderKeyAndValue.getValue());
+                /*
+                key = /kakafka/leader/694d895902aac425
+                value = broker-dbea19ad-aa1e-4b6c-8673-7c3fbc9a7755
+                */
+                LOG.info(
+                        "Leader selected, key = '{}', value = '{}'",
+                        leaderKeyAndValue.getKey(),
+                        leaderKeyAndValue.getValue());
 
-            final String leaderName =
-                    leaderKeyAndValue.getValue().toString(StandardCharsets.US_ASCII);
-            metadata.setLeader(leaderName);
+                final String leaderName =
+                        leaderKeyAndValue.getValue().toString(StandardCharsets.US_ASCII);
+                metadata.setLeader(leaderName);
+            }
         }
 
         @Override
         public void onError(Throwable ex) {
-            LOG.error("Error notification for LEADER election", ex);
+            try (BrokerMdcPropagator notUsed = new BrokerMdcPropagator(brokerName)) {
+                LOG.error("Error notification for LEADER election", ex);
+            }
         }
 
         @Override
         public void onCompleted() {
-            LOG.info("LEADER election completed");
+            try (BrokerMdcPropagator notUsed = new BrokerMdcPropagator(brokerName)) {
+                LOG.info("LEADER election completed");
+            }
         }
     }
 }
