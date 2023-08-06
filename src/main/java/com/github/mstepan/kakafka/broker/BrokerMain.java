@@ -3,6 +3,7 @@ package com.github.mstepan.kakafka.broker;
 import com.github.mstepan.kakafka.broker.core.BrokerNameFactory;
 import com.github.mstepan.kakafka.broker.core.MetadataStorage;
 import com.github.mstepan.kakafka.broker.core.storage.LogStorage;
+import com.github.mstepan.kakafka.broker.core.storage.PartitionFileRegistry;
 import com.github.mstepan.kakafka.broker.etcd.EtcdClientHolder;
 import com.github.mstepan.kakafka.broker.etcd.KeepAliveAndLeaderElectionTask;
 import com.github.mstepan.kakafka.broker.etcd.LiveBrokersTrackerTask;
@@ -63,23 +64,26 @@ public final class BrokerMain {
                 new BrokerConfig(
                         nameFac.generateBrokerName(), getPort(), "http://localhost:2379", "./data");
         final MetadataStorage metadataStorage = new MetadataStorage();
-        final LogStorage logStorage = new LogStorage(config);
 
-        // jetcd 'Client' and all client classes, like `KV` are thread safe,
-        // so we can use one instance per broker.
-        try (Client client = Client.builder().endpoints(config.etcdEndpoint()).build();
-                Lease leaseClient = client.getLeaseClient();
-                Election electionClient = client.getElectionClient();
-                KV kvClient = client.getKVClient();
-                Watch watchClient = client.getWatchClient()) {
+        try( LogStorage logStorage = new LogStorage(config)){
+            logStorage.init();
 
-            EtcdClientHolder etcdClientHolder =
-                    new EtcdClientHolder(leaseClient, electionClient, kvClient, watchClient);
+            // jetcd 'Client' and all client classes, like `KV` are thread safe,
+            // so we can use one instance per broker.
+            try (Client client = Client.builder().endpoints(config.etcdEndpoint()).build();
+                    Lease leaseClient = client.getLeaseClient();
+                    Election electionClient = client.getElectionClient();
+                    KV kvClient = client.getKVClient();
+                    Watch watchClient = client.getWatchClient()) {
 
-            BrokerContext brokerContext =
-                    new BrokerContext(config, metadataStorage, etcdClientHolder, logStorage);
+                EtcdClientHolder etcdClientHolder =
+                        new EtcdClientHolder(leaseClient, electionClient, kvClient, watchClient);
 
-            new BrokerMain(brokerContext).run(getPort());
+                BrokerContext brokerContext =
+                        new BrokerContext(config, metadataStorage, etcdClientHolder, logStorage);
+
+                new BrokerMain(brokerContext).run(getPort());
+            }
         }
     }
 

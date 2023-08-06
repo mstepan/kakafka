@@ -14,17 +14,26 @@ import java.util.Objects;
  * All public method from this class should be threads safe b/c will be executed by multiple threads.
  * Rigth now we will just use 'synchronized' keyword for simplicity.
  */
-public final class LogStorage {
+public final class LogStorage implements AutoCloseable {
 
     private final BrokerConfig config;
 
     private final Path brokerDataFolder;
 
-    private final Map<String, PartitionFile> topicPartitionFileCache = new HashMap<>();
+    private final PartitionFileRegistry registry;
 
     public LogStorage(BrokerConfig config) {
         this.config = Objects.requireNonNull(config, "null 'config' detected");
         this.brokerDataFolder = Path.of(config.dataFolder(), config.brokerName());
+        this.registry = new PartitionFileRegistry();
+    }
+
+    /**
+     * Create broker data folder if not exists. Init method doesn't need to be synchronized b/c it
+     * will be called from main thread before broker event loop is actually started.
+     */
+    public void init() {
+        IOUtils.createFolderIfNotExist(config.brokerName(), brokerDataFolder);
     }
 
     /*
@@ -32,11 +41,7 @@ public final class LogStorage {
      */
     public synchronized void appendMessage(
             String topicName, int partitionIdx, StringTopicMessage msg) {
-
-        // Create broker data folder lazily during first append operation
-        IOUtils.createFolderIfNotExist(config.brokerName(), brokerDataFolder);
-
-        PartitionFile partitionFile = getPartitionFile(topicName, partitionIdx, true);
+        PartitionFile partitionFile = getPartitionFileCreateIfNotExists(topicName, partitionIdx);
         partitionFile.appendMessage(msg);
     }
 
@@ -45,7 +50,7 @@ public final class LogStorage {
      */
     public synchronized StringTopicMessage getMessage(
             String topicName, int partitionIdx, int msgIdx) {
-        PartitionFile partitionFile = getPartitionFile(topicName, partitionIdx, false);
+        PartitionFile partitionFile = getPartitionFile(topicName, partitionIdx);
 
         if (partitionFile == null) {
             // partition file not found, so can't read message
@@ -55,12 +60,9 @@ public final class LogStorage {
         return partitionFile.readMessage(msgIdx);
     }
 
-    private PartitionFile getPartitionFile(
-            String topicName, int partitionIdx, boolean createIfNotExist) {
+    private PartitionFile getPartitionFileCreateIfNotExists(String topicName, int partitionIdx) {
 
-        final String topicAndPartitionKey = topicAndPartitionKey(topicName, partitionIdx);
-
-        PartitionFile partitionFileFromCache = topicPartitionFileCache.get(topicAndPartitionKey);
+        PartitionFile partitionFileFromCache = registry.get(topicName, partitionIdx);
 
         if (partitionFileFromCache != null) {
             System.out.printf(
@@ -70,14 +72,12 @@ public final class LogStorage {
 
         TopicPartitionPaths topicPartitionPaths = constructPartitionPaths(topicName, partitionIdx);
 
-        if (createIfNotExist) {
-            if (!IOUtils.exist(topicPartitionPaths.logFilePath())) {
-                IOUtils.createFileIfNotExist(topicPartitionPaths.logFilePath());
-            }
+        if (!IOUtils.exist(topicPartitionPaths.logFilePath())) {
+            IOUtils.createFileIfNotExist(topicPartitionPaths.logFilePath());
+        }
 
-            if (!IOUtils.exist(topicPartitionPaths.indexFilePath())) {
-                IOUtils.createFileIfNotExist(topicPartitionPaths.indexFilePath());
-            }
+        if (!IOUtils.exist(topicPartitionPaths.indexFilePath())) {
+            IOUtils.createFileIfNotExist(topicPartitionPaths.indexFilePath());
         }
 
         if (!IOUtils.exist(topicPartitionPaths.logFilePath())
@@ -85,21 +85,37 @@ public final class LogStorage {
             return null;
         }
 
-        RandomWritableFile writableLogFile =
-                new RandomWritableFile(topicPartitionPaths.logFilePath());
-        RandomWritableFile writableIndexFile =
-                new RandomWritableFile(topicPartitionPaths.indexFilePath());
-
-        PartitionFile partitionFile = new PartitionFile(writableLogFile, writableIndexFile);
+        PartitionFile partitionFile = new PartitionFile(topicPartitionPaths);
 
         System.out.printf("[%s]Saving PartitionFile in-memory%n", config.brokerName());
-        topicPartitionFileCache.put(topicAndPartitionKey, partitionFile);
+        registry.put(topicName, partitionIdx, partitionFile);
 
         return partitionFile;
     }
 
-    private static String topicAndPartitionKey(String topicName, int partitionIdx) {
-        return "%s/%d".formatted(topicName, partitionIdx);
+    private PartitionFile getPartitionFile(String topicName, int partitionIdx) {
+
+        PartitionFile partitionFileFromCache = registry.get(topicName, partitionIdx);
+
+        if (partitionFileFromCache != null) {
+            System.out.printf(
+                    "[%s]Getting PartitionFile from in-memory hash%n", config.brokerName());
+            return partitionFileFromCache;
+        }
+
+        TopicPartitionPaths topicPartitionPaths = constructPartitionPaths(topicName, partitionIdx);
+
+        if (!IOUtils.exist(topicPartitionPaths.logFilePath())
+                || !IOUtils.exist(topicPartitionPaths.indexFilePath())) {
+            return null;
+        }
+
+        PartitionFile partitionFile = new PartitionFile(topicPartitionPaths);
+
+        System.out.printf("[%s]Saving PartitionFile in-memory%n", config.brokerName());
+        registry.put(topicName, partitionIdx, partitionFile);
+
+        return partitionFile;
     }
 
     /**
@@ -119,5 +135,16 @@ public final class LogStorage {
                 Path.of(partitionFolder.toString(), "%010d.index".formatted(lastMessageIdx));
 
         return new TopicPartitionPaths(logFilePath, indexFilePath);
+    }
+
+    @Override
+    public synchronized void close() {
+        for (PartitionFile singleParFile : registry.getAllPartitionFiles()) {
+            try {
+                singleParFile.close();
+            } catch (Exception ex) {
+                ex.printStackTrace();
+            }
+        }
     }
 }

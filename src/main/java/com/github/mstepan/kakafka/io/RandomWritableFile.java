@@ -125,4 +125,14 @@ public final class RandomWritableFile {
     public String toString() {
         return randomAccessFile == null ? "<null>" : originalFile.toString();
     }
+
+    public void close() {
+        try {
+            randomAccessFile.close();
+            System.out.printf("File '%s' closed%n", originalFile.getAbsolutePath());
+        } catch (IOException ioEx) {
+            throw new IllegalStateException(
+                    "Can't properly close the file '%s'".formatted(originalFile.getAbsoluteFile()), ioEx);
+        }
+    }
 }

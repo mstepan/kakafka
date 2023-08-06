@@ -30,6 +30,7 @@ final class LogStorageTest {
 
     @AfterEach
     void tearDown() {
+        logStorage.close();
         logStorage = null;
         brokerConfig = null;
     }

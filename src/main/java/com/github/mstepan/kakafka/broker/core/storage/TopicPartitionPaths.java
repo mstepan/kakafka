@@ -1,12 +1,13 @@
 package com.github.mstepan.kakafka.broker.core.storage;
 
+import com.github.mstepan.kakafka.io.Preconditions;
+
 import java.nio.file.Path;
-import java.util.Objects;
 
 public record TopicPartitionPaths(Path logFilePath, Path indexFilePath) {
 
     public TopicPartitionPaths {
-        Objects.requireNonNull(logFilePath, "null 'logFilePath' detected");
-        Objects.requireNonNull(indexFilePath, "null 'indexFilePath' detected");
+        Preconditions.checkArgument(logFilePath != null, "null 'logFilePath' detected");
+        Preconditions.checkArgument(indexFilePath != null, "null 'indexFilePath' detected");
     }
 }

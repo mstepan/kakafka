@@ -1,9 +1,11 @@
 package com.github.mstepan.kakafka.broker.core.storage;
 
 import com.github.mstepan.kakafka.broker.core.StringTopicMessage;
+import com.github.mstepan.kakafka.io.Preconditions;
 import com.github.mstepan.kakafka.io.RandomWritableFile;
 
-public final class PartitionFile {
+
+public final class PartitionFile implements AutoCloseable {
 
     private final RandomWritableFile log;
     private final RandomWritableFile index;
@@ -13,6 +15,12 @@ public final class PartitionFile {
     public PartitionFile(RandomWritableFile log, RandomWritableFile index) {
         this.log = log;
         this.index = index;
+    }
+
+    public PartitionFile(TopicPartitionPaths paths) {
+        Preconditions.checkArgument(paths != null, "null 'paths' detected");
+        this.log = new RandomWritableFile(paths.logFilePath());
+        this.index = new RandomWritableFile(paths.indexFilePath());
     }
 
     public void appendMessage(StringTopicMessage msg) {
@@ -57,5 +65,11 @@ public final class PartitionFile {
         }
 
         return null;
+    }
+
+    @Override
+    public void close() throws Exception {
+        log.close();
+        index.close();
     }
 }
