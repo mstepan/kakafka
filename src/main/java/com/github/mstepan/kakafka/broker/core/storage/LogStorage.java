@@ -3,10 +3,7 @@ package com.github.mstepan.kakafka.broker.core.storage;
 import com.github.mstepan.kakafka.broker.BrokerConfig;
 import com.github.mstepan.kakafka.broker.core.StringTopicMessage;
 import com.github.mstepan.kakafka.io.IOUtils;
-import com.github.mstepan.kakafka.io.RandomWritableFile;
 import java.nio.file.Path;
-import java.util.HashMap;
-import java.util.Map;
 import java.util.Objects;
 
 /*

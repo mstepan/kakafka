@@ -2,7 +2,6 @@ package com.github.mstepan.kakafka.broker.core.storage;
 
 import com.github.mstepan.kakafka.io.IOUtils;
 import com.github.mstepan.kakafka.io.Preconditions;
-
 import java.nio.file.Path;
 
 public record TopicPartitionPaths(Path logFilePath, Path indexFilePath) {

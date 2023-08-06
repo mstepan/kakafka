@@ -3,7 +3,6 @@ package com.github.mstepan.kakafka.broker.core.storage;
 import com.github.mstepan.kakafka.broker.core.StringTopicMessage;
 import com.github.mstepan.kakafka.io.Preconditions;
 import com.github.mstepan.kakafka.io.RandomWritableFile;
-
 import java.util.concurrent.locks.Lock;
 import java.util.concurrent.locks.ReentrantLock;
 

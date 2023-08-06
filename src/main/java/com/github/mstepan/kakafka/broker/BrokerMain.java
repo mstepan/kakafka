@@ -3,7 +3,6 @@ package com.github.mstepan.kakafka.broker;
 import com.github.mstepan.kakafka.broker.core.BrokerNameFactory;
 import com.github.mstepan.kakafka.broker.core.MetadataStorage;
 import com.github.mstepan.kakafka.broker.core.storage.LogStorage;
-import com.github.mstepan.kakafka.broker.core.storage.PartitionFileRegistry;
 import com.github.mstepan.kakafka.broker.etcd.EtcdClientHolder;
 import com.github.mstepan.kakafka.broker.etcd.KeepAliveAndLeaderElectionTask;
 import com.github.mstepan.kakafka.broker.etcd.LiveBrokersTrackerTask;
@@ -65,7 +64,7 @@ public final class BrokerMain {
                         nameFac.generateBrokerName(), getPort(), "http://localhost:2379", "./data");
         final MetadataStorage metadataStorage = new MetadataStorage();
 
-        try( LogStorage logStorage = new LogStorage(config)){
+        try (LogStorage logStorage = new LogStorage(config)) {
             logStorage.init();
 
             // jetcd 'Client' and all client classes, like `KV` are thread safe,

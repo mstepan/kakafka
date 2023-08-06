@@ -1,6 +1,5 @@
 package com.github.mstepan.kakafka.broker.core.storage;
 
-
 import java.util.Collection;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
@@ -21,7 +20,7 @@ public class PartitionFileRegistry {
         return "%s/%d".formatted(topicName, partitionIdx);
     }
 
-    public Collection<PartitionFile> getAllPartitionFiles(){
+    public Collection<PartitionFile> getAllPartitionFiles() {
         return cache.values();
     }
 }
