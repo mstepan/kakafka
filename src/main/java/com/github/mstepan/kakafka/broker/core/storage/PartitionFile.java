@@ -4,8 +4,13 @@ import com.github.mstepan.kakafka.broker.core.StringTopicMessage;
 import com.github.mstepan.kakafka.io.Preconditions;
 import com.github.mstepan.kakafka.io.RandomWritableFile;
 
+import java.util.concurrent.locks.Lock;
+import java.util.concurrent.locks.ReentrantLock;
 
 public final class PartitionFile implements AutoCloseable {
+
+    // This lock will only guard concurrent WRITE operations.
+    private final Lock mutex = new ReentrantLock();
 
     private final RandomWritableFile log;
     private final RandomWritableFile index;
@@ -71,5 +76,13 @@ public final class PartitionFile implements AutoCloseable {
     public void close() throws Exception {
         log.close();
         index.close();
+    }
+
+    public void lock() {
+        mutex.lock();
+    }
+
+    public void unlock() {
+        mutex.unlock();
     }
 }

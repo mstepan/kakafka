@@ -12,9 +12,10 @@ import java.util.Objects;
 /*
  * There should be ONE LogStorage associated with main broker process.
  * All public method from this class should be threads safe b/c will be executed by multiple threads.
- * Rigth now we will just use 'synchronized' keyword for simplicity.
  */
 public final class LogStorage implements AutoCloseable {
+
+    private final Object mutex = new Object();
 
     private final BrokerConfig config;
 
@@ -39,83 +40,77 @@ public final class LogStorage implements AutoCloseable {
     /*
      * Write to local broker FS. Append message to end of write-ahead log (WAL) and update index file properly.
      */
-    public synchronized void appendMessage(
-            String topicName, int partitionIdx, StringTopicMessage msg) {
-        PartitionFile partitionFile = getPartitionFileCreateIfNotExists(topicName, partitionIdx);
-        partitionFile.appendMessage(msg);
+    public void appendMessage(String topicName, int partitionIdx, StringTopicMessage msg) {
+
+        PartitionFile partitionFile = registry.get(topicName, partitionIdx);
+
+        // PartitionFile not found in registry so far so there are 2 possible scenarios:
+        // 1. File doesn't exist at all.
+        // 2. File wasn't added to cache before.
+        if (partitionFile == null) {
+
+            TopicPartitionPaths topicPartitionPaths =
+                    constructPartitionPaths(topicName, partitionIdx);
+
+            // Check if 'log' and 'index' files are exist and create if needed using critical
+            // section to prevent concurrent creation of files.
+            synchronized (mutex) {
+
+                // check if another thread created PartitionFile before we entered critical section
+                partitionFile = registry.get(topicName, partitionIdx);
+
+                if (partitionFile == null) {
+                    if (!topicPartitionPaths.isLogFileExist()) {
+                        IOUtils.createFileIfNotExist(topicPartitionPaths.logFilePath());
+                    }
+                    if (!topicPartitionPaths.isIndexFileExist()) {
+                        IOUtils.createFileIfNotExist(topicPartitionPaths.indexFilePath());
+                    }
+
+                    partitionFile = new PartitionFile(topicPartitionPaths);
+                    registry.put(topicName, partitionIdx, partitionFile);
+                }
+            }
+        }
+
+        partitionFile.lock();
+
+        try {
+            partitionFile.appendMessage(msg);
+        } finally {
+            partitionFile.unlock();
+        }
     }
 
     /*
      * Read message identified by triplet <topic name, partition index, message offset>.
      */
-    public synchronized StringTopicMessage getMessage(
-            String topicName, int partitionIdx, int msgIdx) {
-        PartitionFile partitionFile = getPartitionFile(topicName, partitionIdx);
+    public StringTopicMessage getMessage(String topicName, int partitionIdx, int msgIdx) {
+
+        PartitionFile partitionFile = registry.get(topicName, partitionIdx);
 
         if (partitionFile == null) {
-            // partition file not found, so can't read message
-            return null;
+
+            TopicPartitionPaths topicPartitionPaths =
+                    constructPartitionPaths(topicName, partitionIdx);
+
+            if (topicPartitionPaths.isBothFilesExist()) {
+                synchronized (mutex) {
+                    // check if someone else already entered critical section and added
+                    // PartitionFile
+                    partitionFile = registry.get(topicName, partitionIdx);
+                    if (partitionFile == null) {
+                        partitionFile = new PartitionFile(topicPartitionPaths);
+                        registry.put(topicName, partitionIdx, partitionFile);
+                    }
+                }
+            } else {
+                // log file or index file from PartitionFile doesn't exist, so can't read message
+                return null;
+            }
         }
 
         return partitionFile.readMessage(msgIdx);
-    }
-
-    private PartitionFile getPartitionFileCreateIfNotExists(String topicName, int partitionIdx) {
-
-        PartitionFile partitionFileFromCache = registry.get(topicName, partitionIdx);
-
-        if (partitionFileFromCache != null) {
-            System.out.printf(
-                    "[%s]Getting PartitionFile from in-memory hash%n", config.brokerName());
-            return partitionFileFromCache;
-        }
-
-        TopicPartitionPaths topicPartitionPaths = constructPartitionPaths(topicName, partitionIdx);
-
-        if (!IOUtils.exist(topicPartitionPaths.logFilePath())) {
-            IOUtils.createFileIfNotExist(topicPartitionPaths.logFilePath());
-        }
-
-        if (!IOUtils.exist(topicPartitionPaths.indexFilePath())) {
-            IOUtils.createFileIfNotExist(topicPartitionPaths.indexFilePath());
-        }
-
-        if (!IOUtils.exist(topicPartitionPaths.logFilePath())
-                || !IOUtils.exist(topicPartitionPaths.indexFilePath())) {
-            return null;
-        }
-
-        PartitionFile partitionFile = new PartitionFile(topicPartitionPaths);
-
-        System.out.printf("[%s]Saving PartitionFile in-memory%n", config.brokerName());
-        registry.put(topicName, partitionIdx, partitionFile);
-
-        return partitionFile;
-    }
-
-    private PartitionFile getPartitionFile(String topicName, int partitionIdx) {
-
-        PartitionFile partitionFileFromCache = registry.get(topicName, partitionIdx);
-
-        if (partitionFileFromCache != null) {
-            System.out.printf(
-                    "[%s]Getting PartitionFile from in-memory hash%n", config.brokerName());
-            return partitionFileFromCache;
-        }
-
-        TopicPartitionPaths topicPartitionPaths = constructPartitionPaths(topicName, partitionIdx);
-
-        if (!IOUtils.exist(topicPartitionPaths.logFilePath())
-                || !IOUtils.exist(topicPartitionPaths.indexFilePath())) {
-            return null;
-        }
-
-        PartitionFile partitionFile = new PartitionFile(topicPartitionPaths);
-
-        System.out.printf("[%s]Saving PartitionFile in-memory%n", config.brokerName());
-        registry.put(topicName, partitionIdx, partitionFile);
-
-        return partitionFile;
     }
 
     /**

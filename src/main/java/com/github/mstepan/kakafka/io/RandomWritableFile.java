@@ -16,12 +16,16 @@ public final class RandomWritableFile {
     private final File originalFile;
     private final RandomAccessFile randomAccessFile;
 
+    /** Track file length explicitly, instead of calling 'randomAccessFile.length()' every time. */
+    private long length;
+
     public RandomWritableFile(Path filePath) {
         Preconditions.checkArgument(filePath != null, "null 'filePath' detected");
         try {
             this.originalFile = filePath.toFile();
             this.randomAccessFile = new RandomAccessFile(originalFile, "rw");
-            randomAccessFile.seek(randomAccessFile.length());
+            this.length = randomAccessFile.length();
+            randomAccessFile.seek(length);
         } catch (IOException ioEx) {
             throw new ExceptionInInitializerError(ioEx);
         }
@@ -30,11 +34,18 @@ public final class RandomWritableFile {
     public long appendKeyAndValue(String key, String value) {
         try {
             randomAccessFile.writeInt(key.length());
+            length += Integer.BYTES;
+
             randomAccessFile.writeBytes(key);
+            length += key.length();
 
             randomAccessFile.writeInt(value.length());
+            length += Integer.BYTES;
+
             randomAccessFile.writeBytes(value);
-            return randomAccessFile.length();
+            length += value.length();
+
+            return length;
         } catch (IOException ioEx) {
             throw new IllegalStateException(ioEx);
         }
@@ -43,25 +54,29 @@ public final class RandomWritableFile {
     public long appendMessageOffset(int msgId, long msgOffsetInFile) {
         try {
             randomAccessFile.writeInt(msgId);
+            length += Integer.BYTES;
+
             randomAccessFile.writeLong(msgOffsetInFile);
+            length += Long.BYTES;
 
             System.out.printf("message idx %d, file offset %d%n", msgId, msgOffsetInFile);
 
-            return randomAccessFile.length();
+            return length;
         } catch (IOException ioEx) {
             throw new IllegalStateException(ioEx);
         }
     }
 
-    private static final long IDX_AND_FILE_OFFSET_SIZE_IN_BYTES = 2 * Long.BYTES;
+    // sizeof(msgId INT) + sizeof(msgOffset LONG)
+    private static final long IDX_AND_FILE_OFFSET_SIZE_IN_BYTES = Integer.BYTES + Long.BYTES;
 
     public MessageStreamStatus readLastMessageIndexAndOffset() {
         try {
-            if (randomAccessFile.length() == 0L) {
+            if (length == 0L) {
                 return null;
             }
 
-            randomAccessFile.seek(randomAccessFile.length() - IDX_AND_FILE_OFFSET_SIZE_IN_BYTES);
+            randomAccessFile.seek(length - IDX_AND_FILE_OFFSET_SIZE_IN_BYTES);
 
             int msgIdx = randomAccessFile.readInt();
             long fileOffset = randomAccessFile.readLong();
@@ -132,7 +147,8 @@ public final class RandomWritableFile {
             System.out.printf("File '%s' closed%n", originalFile.getAbsolutePath());
         } catch (IOException ioEx) {
             throw new IllegalStateException(
-                    "Can't properly close the file '%s'".formatted(originalFile.getAbsoluteFile()), ioEx);
+                    "Can't properly close the file '%s'".formatted(originalFile.getAbsoluteFile()),
+                    ioEx);
         }
     }
 }

@@ -12,6 +12,12 @@ import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
+import java.sql.Time;
+import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.TimeUnit;
+
 final class LogStorageTest {
 
     private static final String BROKER_DATA_FOLDER = "data";
@@ -115,5 +121,52 @@ final class LogStorageTest {
         StringTopicMessage msg = logStorage.getMessage(topicName, 0, -1);
 
         assertNull(msg, "Retrieved message for negative offset '%d'".formatted(-1));
+    }
+
+    @Test
+    void addMessagesConcurrently() throws Exception {
+        final String topicName = "topic-1";
+        final String msgKey = "key-111";
+        final int messagesPerThread = 100;
+
+        final int threadsCount = 10;
+        final CountDownLatch allCompleted = new CountDownLatch(threadsCount);
+
+        ExecutorService pool = Executors.newFixedThreadPool(threadsCount);
+        try {
+            for (int i = 0; i < threadsCount; ++i) {
+                final int threadIdx = i;
+                pool.execute(
+                        () -> {
+                            try {
+                                for (int it = 0;
+                                        it < messagesPerThread
+                                                && !Thread.currentThread().isInterrupted();
+                                        ++it) {
+                                    logStorage.appendMessage(
+                                            topicName,
+                                            0,
+                                            new StringTopicMessage(
+                                                    msgKey, "value-%d".formatted(threadIdx)));
+                                }
+                            } finally {
+                                allCompleted.countDown();
+                            }
+                        });
+            }
+
+            // wait till all threads will complete publishing messages
+            allCompleted.await();
+        } finally {
+            pool.shutdownNow();
+        }
+        for (int msgIdx = 0; msgIdx < threadsCount * messagesPerThread; ++msgIdx) {
+            StringTopicMessage msg = logStorage.getMessage(topicName, 0, msgIdx);
+
+            assertNotNull(msg, "Can't retrieve message");
+            assertEquals(msgKey, msg.key(), "Incorrect key for message");
+            //            assertEquals(expectedValue, actualMsg.value(), "Incorrect value for
+            // message");
+        }
     }
 }
