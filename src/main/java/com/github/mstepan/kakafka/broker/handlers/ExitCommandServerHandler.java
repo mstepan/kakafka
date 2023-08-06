@@ -6,14 +6,13 @@ import com.github.mstepan.kakafka.command.response.ExitCommandResponse;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelInboundHandlerAdapter;
 import io.netty.util.ReferenceCountUtil;
+import java.lang.invoke.MethodHandles;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 public final class ExitCommandServerHandler extends ChannelInboundHandlerAdapter {
 
-    private final String brokerName;
-
-    public ExitCommandServerHandler(String brokerName) {
-        this.brokerName = brokerName;
-    }
+    private static final Logger LOG = LoggerFactory.getLogger(MethodHandles.lookup().lookupClass());
 
     @Override
     public void channelRead(ChannelHandlerContext ctx, Object msg) {
@@ -21,7 +20,7 @@ public final class ExitCommandServerHandler extends ChannelInboundHandlerAdapter
 
         if (command instanceof ExitCommand) {
             try {
-                System.out.printf("[%s] 'exit' command received %n", brokerName);
+                LOG.info("'exit' command received");
                 ctx.writeAndFlush(new ExitCommandResponse());
                 ctx.close();
             } finally {
@@ -33,7 +32,7 @@ public final class ExitCommandServerHandler extends ChannelInboundHandlerAdapter
     }
 
     @Override
-    public void exceptionCaught(ChannelHandlerContext ctx, Throwable ex) throws Exception {
+    public void exceptionCaught(ChannelHandlerContext ctx, Throwable ex) {
         ex.printStackTrace();
         ctx.close();
     }

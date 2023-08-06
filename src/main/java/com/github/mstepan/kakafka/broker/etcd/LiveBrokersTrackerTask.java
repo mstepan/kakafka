@@ -2,6 +2,7 @@ package com.github.mstepan.kakafka.broker.etcd;
 
 import com.github.mstepan.kakafka.broker.BrokerConfig;
 import com.github.mstepan.kakafka.broker.BrokerContext;
+import com.github.mstepan.kakafka.broker.BrokerMain;
 import com.github.mstepan.kakafka.broker.core.LiveBroker;
 import com.github.mstepan.kakafka.broker.utils.EtcdUtils;
 import io.etcd.jetcd.ByteSequence;
@@ -13,18 +14,24 @@ import io.etcd.jetcd.options.GetOption;
 import io.etcd.jetcd.options.WatchOption;
 import io.etcd.jetcd.watch.WatchEvent;
 import io.etcd.jetcd.watch.WatchResponse;
+import java.lang.invoke.MethodHandles;
 import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.ArrayBlockingQueue;
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.ExecutionException;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.slf4j.MDC;
 
 /**
  * This task tracks live brokers in a separate thread and updates 'MetadataStorage.liveBrokers' map
  * properly.
  */
 public class LiveBrokersTrackerTask implements Runnable {
+
+    private static final Logger LOG = LoggerFactory.getLogger(MethodHandles.lookup().lookupClass());
 
     private static final ByteSequence BROKER_KEY_PREFIX =
             EtcdUtils.toByteSeq(BrokerConfig.BROKER_KEY_PREFIX);
@@ -39,31 +46,39 @@ public class LiveBrokersTrackerTask implements Runnable {
 
     @Override
     public void run() {
-        Thread.currentThread().setName("LiveBrokersTrackerTask");
-        System.out.printf(
-                "[%s] Metadata retriever thread started", brokerCtx.config().brokerName());
 
-        watchForChanges();
+        MDC.put(BrokerMain.BROKER_NAME_MDC_KEY, brokerCtx.config().brokerName());
 
-        fetchLiveBrokersFromEtcd();
+        try {
+            Thread.currentThread().setName("LiveBrokersTrackerTask");
+            LOG.info("Live brokers tracker DEDICATED thread started");
 
-        while (!Thread.currentThread().isInterrupted()) {
-            try {
-                WatchEvent newEvent = brokerNewEvents.take();
+            watchForChanges();
 
-                if (newEvent.getEventType() == WatchEvent.EventType.PUT) {
+            fetchLiveBrokersFromEtcd();
 
-                    final String brokerId = extractBrokerId(newEvent.getKeyValue());
-                    final String brokerUrl = extractBrokerUrl(newEvent.getKeyValue());
+            while (!Thread.currentThread().isInterrupted()) {
+                try {
+                    WatchEvent newEvent = brokerNewEvents.take();
 
-                    brokerCtx.metadata().addLiveBroker(new LiveBroker(brokerId, brokerUrl));
-                } else if (newEvent.getEventType() == WatchEvent.EventType.DELETE) {
-                    brokerCtx.metadata().deleteLiveBroker(extractBrokerId(newEvent.getKeyValue()));
+                    if (newEvent.getEventType() == WatchEvent.EventType.PUT) {
+
+                        final String brokerId = extractBrokerId(newEvent.getKeyValue());
+                        final String brokerUrl = extractBrokerUrl(newEvent.getKeyValue());
+
+                        brokerCtx.metadata().addLiveBroker(new LiveBroker(brokerId, brokerUrl));
+                    } else if (newEvent.getEventType() == WatchEvent.EventType.DELETE) {
+                        brokerCtx
+                                .metadata()
+                                .deleteLiveBroker(extractBrokerId(newEvent.getKeyValue()));
+                    }
+
+                } catch (InterruptedException interEx) {
+                    Thread.currentThread().interrupt();
                 }
-
-            } catch (InterruptedException interEx) {
-                Thread.currentThread().interrupt();
             }
+        } finally {
+            MDC.clear();
         }
     }
 
@@ -76,8 +91,7 @@ public class LiveBrokersTrackerTask implements Runnable {
                     kvClient.get(BROKER_KEY_PREFIX, GetOption.newBuilder().isPrefix(true).build())
                             .get();
 
-            System.out.printf(
-                    "[%s] metadata state obtained from 'etcd'%n", brokerCtx.config().brokerName());
+            LOG.info("Metadata state obtained from 'etcd'");
 
             List<LiveBroker> liveBrokers = new ArrayList<>();
             for (KeyValue keyValue : getResp.getKvs()) {
@@ -126,11 +140,11 @@ public class LiveBrokersTrackerTask implements Runnable {
 
                         for (WatchEvent singleEvent : events) {
                             if (singleEvent.getEventType() == WatchEvent.EventType.UNRECOGNIZED) {
-                                System.err.println("UNRECOGNIZED event");
+                                LOG.warn("UNRECOGNIZED event");
                             } else {
                                 // PUT & DELETE only here
                                 if (!brokerNewEvents.offer(singleEvent)) {
-                                    System.err.println(
+                                    LOG.error(
                                             "Can't insert events into 'brokerNewEvents', queue is FULL.");
                                 }
                             }
@@ -139,7 +153,10 @@ public class LiveBrokersTrackerTask implements Runnable {
 
                     @Override
                     public void onError(Throwable ex) {
-                        ex.printStackTrace();
+                        LOG.error(
+                                "Error during watching events on etcd value '%s'"
+                                        .formatted(BROKER_KEY_PREFIX),
+                                ex);
                     }
 
                     @Override

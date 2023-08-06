@@ -1,5 +1,6 @@
 package com.github.mstepan.kakafka.broker.core.topic;
 
+import com.github.mstepan.kakafka.broker.utils.Preconditions;
 import com.github.mstepan.kakafka.io.DataIn;
 import com.github.mstepan.kakafka.io.DataOut;
 import java.io.ByteArrayInputStream;
@@ -10,14 +11,13 @@ import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.List;
-import java.util.Objects;
 import java.util.zip.GZIPInputStream;
 import java.util.zip.GZIPOutputStream;
 
 public record TopicInfo(String topicName, List<TopicPartitionInfo> partitions) {
 
     public TopicInfo {
-        Objects.requireNonNull(partitions, "null 'partitions' detected");
+        Preconditions.checkNotNull(partitions, "null 'partitions' detected");
     }
 
     /** Unmarshall TopicInfo entity from 'etcd' value. */

@@ -32,11 +32,19 @@ import io.netty.channel.socket.nio.NioServerSocketChannel;
 import io.netty.util.ResourceLeakDetector;
 import io.netty.util.concurrent.DefaultEventExecutorGroup;
 import io.netty.util.concurrent.EventExecutorGroup;
+import java.lang.invoke.MethodHandles;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ThreadLocalRandom;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.slf4j.MDC;
 
 public final class BrokerMain {
+
+    public static final String BROKER_NAME_MDC_KEY = "broker.name";
+
+    private static final Logger LOG = LoggerFactory.getLogger(MethodHandles.lookup().lookupClass());
 
     private final BrokerContext brokerCtx;
 
@@ -59,30 +67,40 @@ public final class BrokerMain {
 
     public static void main(String[] args) throws Exception {
         final BrokerNameFactory nameFac = new BrokerNameFactory();
-        final BrokerConfig config =
-                new BrokerConfig(
-                        nameFac.generateBrokerName(), getPort(), "http://localhost:2379", "./data");
-        final MetadataStorage metadataStorage = new MetadataStorage();
+        final String brokerName = nameFac.generateBrokerName();
 
-        try (LogStorage logStorage = new LogStorage(config)) {
-            logStorage.init();
+        MDC.put(BROKER_NAME_MDC_KEY, brokerName);
 
-            // jetcd 'Client' and all client classes, like `KV` are thread safe,
-            // so we can use one instance per broker.
-            try (Client client = Client.builder().endpoints(config.etcdEndpoint()).build();
-                    Lease leaseClient = client.getLeaseClient();
-                    Election electionClient = client.getElectionClient();
-                    KV kvClient = client.getKVClient();
-                    Watch watchClient = client.getWatchClient()) {
+        try {
 
-                EtcdClientHolder etcdClientHolder =
-                        new EtcdClientHolder(leaseClient, electionClient, kvClient, watchClient);
+            final BrokerConfig config =
+                    new BrokerConfig(brokerName, getPort(), "http://localhost:2379", "./data");
+            final MetadataStorage metadataStorage = new MetadataStorage();
 
-                BrokerContext brokerContext =
-                        new BrokerContext(config, metadataStorage, etcdClientHolder, logStorage);
+            try (LogStorage logStorage = new LogStorage(config)) {
+                logStorage.init();
 
-                new BrokerMain(brokerContext).run(getPort());
+                // jetcd 'Client' and all client classes, like `KV` are thread safe,
+                // so we can use one instance per broker.
+                try (Client client = Client.builder().endpoints(config.etcdEndpoint()).build();
+                        Lease leaseClient = client.getLeaseClient();
+                        Election electionClient = client.getElectionClient();
+                        KV kvClient = client.getKVClient();
+                        Watch watchClient = client.getWatchClient()) {
+
+                    EtcdClientHolder etcdClientHolder =
+                            new EtcdClientHolder(
+                                    leaseClient, electionClient, kvClient, watchClient);
+
+                    BrokerContext brokerContext =
+                            new BrokerContext(
+                                    config, metadataStorage, etcdClientHolder, logStorage);
+
+                    new BrokerMain(brokerContext).run(getPort());
+                }
             }
+        } finally {
+            MDC.clear();
         }
     }
 
@@ -139,36 +157,26 @@ public final class BrokerMain {
                                     pipeline.addLast(
                                             "commandResponseEncoder", new CommandResponseEncoder());
 
-                                    pipeline.addLast(
-                                            "exitHandler",
-                                            new ExitCommandServerHandler(
-                                                    brokerCtx.config().brokerName()));
+                                    pipeline.addLast("exitHandler", new ExitCommandServerHandler());
 
                                     pipeline.addLast(
                                             "getMetadataHandler",
-                                            new GetMetadataCommandServerHandler(
-                                                    brokerCtx.config().brokerName(),
-                                                    brokerCtx.metadata()));
+                                            new GetMetadataCommandServerHandler(brokerCtx));
 
                                     pipeline.addLast(
                                             IO_BLOCKING_ETC_CALLS_GROUP,
                                             "getTopicInfo",
-                                            new GetTopicInfoServerHandler(
-                                                    brokerCtx.config().brokerName(), brokerCtx));
+                                            new GetTopicInfoServerHandler(brokerCtx));
 
                                     pipeline.addLast(
                                             IO_BLOCKING_FILE_SYSTEM_CALLS_GROUP,
                                             "pushMessageHandler",
-                                            new PushMessageServerHandler(
-                                                    brokerCtx.config().brokerName(),
-                                                    brokerCtx.logStorage()));
+                                            new PushMessageServerHandler(brokerCtx));
 
                                     pipeline.addLast(
                                             IO_BLOCKING_FILE_SYSTEM_CALLS_GROUP,
                                             "consumeMessageHandler",
-                                            new ConsumeMessageServerHandler(
-                                                    brokerCtx.config().brokerName(),
-                                                    brokerCtx.logStorage()));
+                                            new ConsumeMessageServerHandler(brokerCtx));
 
                                     pipeline.addLast(
                                             IO_BLOCKING_ETC_CALLS_GROUP,
@@ -184,9 +192,7 @@ public final class BrokerMain {
                     // and the connection is dropped if 3 sequential ACKs are missed.
                     .childOption(ChannelOption.SO_KEEPALIVE, true);
 
-            System.out.printf(
-                    "[%s] started at '%s:%d'%n",
-                    brokerCtx.config().brokerName(), "localhost", port);
+            LOG.info("Broker started at '{}:{}'", "localhost", port);
 
             // Bind and start to accept incoming connections.
             // Bind to the port of all NICs (network interface cards) in the machine.

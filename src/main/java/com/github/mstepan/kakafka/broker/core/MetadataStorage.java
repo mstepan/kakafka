@@ -1,10 +1,9 @@
 package com.github.mstepan.kakafka.broker.core;
 
+import com.github.mstepan.kakafka.broker.utils.Preconditions;
 import java.util.ArrayList;
-import java.util.Collection;
 import java.util.List;
 import java.util.Map;
-import java.util.Objects;
 import java.util.Queue;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentLinkedQueue;
@@ -19,7 +18,7 @@ public class MetadataStorage {
     private final Queue<LiveBroker> brokersForSampling = new ConcurrentLinkedQueue<>();
 
     public void setLeader(String brokerName) {
-        Objects.requireNonNull(brokerName, "null 'brokerName' during set operation");
+        Preconditions.checkArgument(brokerName != null, "null 'brokerName' during set operation");
         this.leaderBrokerNameRef.set(brokerName);
     }
 
@@ -43,10 +42,6 @@ public class MetadataStorage {
         liveBrokers.remove(brokerId);
     }
 
-    public Collection<LiveBroker> getLiveBrokers() {
-        return liveBrokers.values();
-    }
-
     /** Select live brokers in round-robin fashion here. */
     public List<LiveBroker> getSamplingOfLiveBrokers(int count) {
 
@@ -68,28 +63,4 @@ public class MetadataStorage {
 
         return sampling;
     }
-
-    //    public CompletableFuture<GetResponse> getMetadataState() {
-    //        //
-    //        // todo: we should query metadata state in background thread
-    //        // todo: here we just need to obtain in-memory data and send back to client
-    //        //
-    //        return CompletableFuture.supplyAsync(
-    //                () -> {
-    //                    try (Client client =
-    // Client.builder().endpoints(config.etcdEndpoint()).build();
-    //                            KV kvClient = client.getKVClient()) {
-    //                        try {
-    //                            return kvClient.get(
-    //
-    // EtcdUtils.toByteSeq(BrokerConfig.BROKER_KEY_PREFIX),
-    //                                            GetOption.newBuilder().isPrefix(true).build())
-    //                                    .get();
-    //                        } catch (InterruptedException | ExecutionException ex) {
-    //                            ex.printStackTrace();
-    //                            return null;
-    //                        }
-    //                    }
-    //                });
-    //    }
 }

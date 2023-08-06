@@ -1,6 +1,6 @@
 package com.github.mstepan.kakafka.broker.core;
 
-import java.util.Objects;
+import com.github.mstepan.kakafka.broker.utils.Preconditions;
 
 /** Container for valid value or Exception otherwise. */
 public final class Either<T> {
@@ -14,12 +14,12 @@ public final class Either<T> {
     }
 
     public static <T> Either<T> error(Exception ex) {
-        Objects.requireNonNull(ex, "null 'ex' for Either detected");
+        Preconditions.checkArgument(ex != null, "null 'ex' for Either detected");
         return new Either<>(null, ex);
     }
 
     public static <T> Either<T> ok(T value) {
-        Objects.requireNonNull(value, "null 'value' for Either detected");
+        Preconditions.checkNotNull(value, "null 'value' for Either detected");
         return new Either<>(value, null);
     }
 

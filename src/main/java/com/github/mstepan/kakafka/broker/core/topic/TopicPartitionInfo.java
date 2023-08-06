@@ -1,14 +1,13 @@
 package com.github.mstepan.kakafka.broker.core.topic;
 
-import com.github.mstepan.kakafka.broker.utils.ValidationUtils;
+import com.github.mstepan.kakafka.broker.utils.Preconditions;
 import java.util.List;
-import java.util.Objects;
 
 public record TopicPartitionInfo(int idx, String leader, List<String> replicas) {
 
     public TopicPartitionInfo {
-        ValidationUtils.checkArgument(idx >= 0, "negative 'idx' value detected: %d".formatted(idx));
-        Objects.requireNonNull(leader, "null 'leader' detected");
-        Objects.requireNonNull(replicas, "null 'replicas' detected");
+        Preconditions.checkArgument(idx >= 0, "negative 'idx' value detected: %d".formatted(idx));
+        Preconditions.checkNotNull(leader, "null 'leader' detected");
+        Preconditions.checkNotNull(replicas, "null 'replicas' detected");
     }
 }

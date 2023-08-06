@@ -1,8 +1,10 @@
 package com.github.mstepan.kakafka.io;
 
+import com.github.mstepan.kakafka.broker.utils.Preconditions;
 import java.io.File;
 import java.io.IOException;
 import java.io.RandomAccessFile;
+import java.lang.invoke.MethodHandles;
 import java.net.Socket;
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -10,22 +12,26 @@ import java.nio.file.attribute.PosixFilePermission;
 import java.util.Comparator;
 import java.util.Set;
 import java.util.stream.Stream;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 public final class IOUtils {
+
+    private static final Logger LOG = LoggerFactory.getLogger(MethodHandles.lookup().lookupClass());
 
     private IOUtils() {
         throw new AssertionError("Can't instantiate utility-only class");
     }
 
-    public static void createFolderIfNotExist(String brokerName, Path folderPath) {
+    public static void createFolderIfNotExist(Path folderPath) {
         if (Files.notExists(folderPath)) {
-            System.out.printf("[%s]Creating folder '%s'%n", brokerName, folderPath);
+            LOG.info("Creating folder '{}'", folderPath);
             boolean folderCreated = folderPath.toFile().mkdirs();
             if (!folderCreated) {
                 throw new IllegalStateException("Can't create folder '%s'".formatted(folderPath));
             }
         } else {
-            System.out.printf("[%s]Using existing '%s' folder%n", brokerName, folderPath);
+            LOG.info("Using existing '{}' folder", folderPath);
         }
     }
 

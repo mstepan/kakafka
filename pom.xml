@@ -22,10 +22,12 @@
         <assertj.version>3.15.0</assertj.version>
         <jetcd.version>0.7.5</jetcd.version>
         <junit.bom.version>5.5.2</junit.bom.version>
+        <logback.classic.version>1.4.9</logback.classic.version>
         <mockito-version>2.21.0</mockito-version>
         <netty.version>4.1.94.Final</netty.version>
         <surefire.plugin.version>3.0.0-M4</surefire.plugin.version>
         <shade.plugin.version>3.4.0</shade.plugin.version>
+        <sl4j.api.version>2.0.7</sl4j.api.version>
     </properties>
 
     <build>
@@ -62,7 +64,7 @@
                 </executions>
             </plugin>
 
-            <!-- Java compiler plugin with Error Prone (warnings enabled) -->
+            <!-- Java compiler plugin -->
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-compiler-plugin</artifactId>
@@ -135,6 +137,18 @@
             <groupId>io.etcd</groupId>
             <artifactId>jetcd-core</artifactId>
             <version>${jetcd.version}</version>
+        </dependency>
+
+        <!-- logging -->
+        <dependency>
+            <groupId>org.slf4j</groupId>
+            <artifactId>slf4j-api</artifactId>
+            <version>${sl4j.api.version}</version>
+        </dependency>
+        <dependency>
+            <groupId>ch.qos.logback</groupId>
+            <artifactId>logback-classic</artifactId>
+            <version>${logback.classic.version}</version>
         </dependency>
 
         <!-- Test dependencies -->

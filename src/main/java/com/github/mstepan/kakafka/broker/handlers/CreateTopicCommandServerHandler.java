@@ -1,5 +1,7 @@
 package com.github.mstepan.kakafka.broker.handlers;
 
+import static com.github.mstepan.kakafka.broker.BrokerMain.BROKER_NAME_MDC_KEY;
+
 import com.github.mstepan.kakafka.broker.BrokerContext;
 import com.github.mstepan.kakafka.broker.core.Either;
 import com.github.mstepan.kakafka.broker.core.LiveBroker;
@@ -15,11 +17,17 @@ import io.etcd.jetcd.KV;
 import io.etcd.jetcd.kv.GetResponse;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelInboundHandlerAdapter;
+import java.lang.invoke.MethodHandles;
 import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.List;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.slf4j.MDC;
 
 public final class CreateTopicCommandServerHandler extends ChannelInboundHandlerAdapter {
+
+    private static final Logger LOG = LoggerFactory.getLogger(MethodHandles.lookup().lookupClass());
 
     private final BrokerContext brokerCtx;
 
@@ -30,30 +38,35 @@ public final class CreateTopicCommandServerHandler extends ChannelInboundHandler
     @Override
     public void channelRead(ChannelHandlerContext ctx, Object msg) {
 
-        final String brokerName = brokerCtx.config().brokerName();
-
         Command command = (Command) msg;
 
         if (command instanceof CreateTopicCommand createTopicCommand) {
-            System.out.printf(
-                    "[%s] 'create_topic'command for topic '%s' with '%d' partitions %n",
-                    brokerName,
-                    createTopicCommand.topicName(),
-                    createTopicCommand.partitionsCount());
 
-            //
-            // CreateTopicCommandServerHandler handler is calling 'createTopicInEtcd' method in a
-            // blocking fashion,
-            // so it will be executed in separate 'EventExecutorGroup' called
-            // 'BrokerMain.IO_BLOCKING_OPERATIONS_GROUP'
-            //
-            Either<TopicInfo> maybeTopicInfo =
-                    createTopicInEtcd(brokerCtx.metadata(), createTopicCommand);
+            try {
+                MDC.put(BROKER_NAME_MDC_KEY, brokerCtx.config().brokerName());
 
-            if (maybeTopicInfo.isOk()) {
-                ctx.writeAndFlush(new CreateTopicCommandResponse(maybeTopicInfo.value(), 200));
-            } else {
-                ctx.writeAndFlush(new CreateTopicCommandResponse(null, 500));
+                LOG.info(
+                        "'create_topic'command for topic '{}' with '{}' partitions",
+                        createTopicCommand.topicName(),
+                        createTopicCommand.partitionsCount());
+
+                //
+                // CreateTopicCommandServerHandler handler is calling 'createTopicInEtcd' method in
+                // a
+                // blocking fashion,
+                // so it will be executed in separate 'EventExecutorGroup' called
+                // 'BrokerMain.IO_BLOCKING_OPERATIONS_GROUP'
+                //
+                Either<TopicInfo> maybeTopicInfo =
+                        createTopicInEtcd(brokerCtx.metadata(), createTopicCommand);
+
+                if (maybeTopicInfo.isOk()) {
+                    ctx.writeAndFlush(new CreateTopicCommandResponse(maybeTopicInfo.value(), 200));
+                } else {
+                    ctx.writeAndFlush(new CreateTopicCommandResponse(null, 500));
+                }
+            } finally {
+                MDC.clear();
             }
         } else {
             ctx.fireChannelRead(msg);
@@ -100,8 +113,7 @@ public final class CreateTopicCommandServerHandler extends ChannelInboundHandler
                                 createReplicas(samplingIt, command.replicasCnt() - 1)));
             }
 
-            System.out.printf(
-                    "[%s] partitions = '%s'%n", brokerCtx.config().brokerName(), partitions);
+            LOG.info("partitions = '{}'", partitions);
 
             TopicInfo topicInfo = new TopicInfo(command.topicName(), partitions);
 

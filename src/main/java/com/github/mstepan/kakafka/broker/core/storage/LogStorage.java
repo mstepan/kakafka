@@ -2,9 +2,9 @@ package com.github.mstepan.kakafka.broker.core.storage;
 
 import com.github.mstepan.kakafka.broker.BrokerConfig;
 import com.github.mstepan.kakafka.broker.core.StringTopicMessage;
+import com.github.mstepan.kakafka.broker.utils.Preconditions;
 import com.github.mstepan.kakafka.io.IOUtils;
 import java.nio.file.Path;
-import java.util.Objects;
 
 /*
  * There should be ONE LogStorage associated with main broker process.
@@ -21,7 +21,7 @@ public final class LogStorage implements AutoCloseable {
     private final PartitionFileRegistry registry;
 
     public LogStorage(BrokerConfig config) {
-        this.config = Objects.requireNonNull(config, "null 'config' detected");
+        this.config = Preconditions.checkNotNull(config, "null 'config' detected");
         this.brokerDataFolder = Path.of(config.dataFolder(), config.brokerName());
         this.registry = new PartitionFileRegistry();
     }
@@ -31,7 +31,7 @@ public final class LogStorage implements AutoCloseable {
      * will be called from main thread before broker event loop is actually started.
      */
     public void init() {
-        IOUtils.createFolderIfNotExist(config.brokerName(), brokerDataFolder);
+        IOUtils.createFolderIfNotExist(brokerDataFolder);
     }
 
     /*

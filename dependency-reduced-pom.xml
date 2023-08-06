@@ -146,7 +146,9 @@
     <spotless.plugin.version>2.37.0</spotless.plugin.version>
     <mockito-version>2.21.0</mockito-version>
     <surefire.plugin.version>3.0.0-M4</surefire.plugin.version>
+    <logback.classic.version>1.4.9</logback.classic.version>
     <compiler.plugin.version>3.8.1</compiler.plugin.version>
+    <sl4j.api.version>2.0.7</sl4j.api.version>
     <junit.bom.version>5.5.2</junit.bom.version>
     <assertj.version>3.15.0</assertj.version>
     <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>

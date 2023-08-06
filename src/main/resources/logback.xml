@@ -1,0 +1,44 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<configuration>
+    <!-- Console Appender -->
+    <appender name="CONSOLE" class="ch.qos.logback.core.ConsoleAppender">
+        <encoder>
+            <pattern>%d{HH:mm:ss.SSS} [%X{broker.name}] [%thread] %-5level %logger{36} - %msg%n</pattern>
+        </encoder>
+    </appender>
+
+    <!-- Root Logger set to INFO -->
+    <root level="INFO">
+        <appender-ref ref="CONSOLE" />
+    </root>
+</configuration>
+
+
+<!--<configuration>-->
+
+<!--    <appender name="rolling" class="ch.qos.logback.core.rolling.RollingFileAppender">-->
+<!--        <file>/logs/myapp.log</file>-->
+<!--        <rollingPolicy class="ch.qos.logback.core.rolling.SizeAndTimeBasedRollingPolicy">-->
+<!--            <fileNamePattern>${catalina.base}/logs/myapp.%d{yyyy-MM-dd}.%i.log.gz</fileNamePattern>-->
+<!--            <maxFileSize>100MB</maxFileSize>-->
+<!--            <maxHistory>200</maxHistory>-->
+<!--            <totalSizeCap>5GB</totalSizeCap>-->
+<!--        </rollingPolicy>-->
+<!--        <encoder>-->
+<!--            <pattern>%date{ISO8601} %-5level %thread %logger %msg%n</pattern>-->
+<!--        </encoder>-->
+<!--    </appender>-->
+
+<!--    <appender name="async" class="ch.qos.logback.classic.AsyncAppender">-->
+<!--        <appender-ref ref="rolling"/>-->
+<!--        <discardingThreshold>0</discardingThreshold>-->
+<!--        <queueSize>256</queueSize>-->
+<!--        <neverBlock>false</neverBlock>-->
+<!--        <includeCallerData>false</includeCallerData>-->
+<!--    </appender>-->
+
+<!--    <root level="info">-->
+<!--        <appender-ref ref="async"/>-->
+<!--    </root>-->
+
+<!--</configuration>-->

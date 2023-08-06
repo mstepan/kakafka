@@ -1,7 +1,7 @@
 package com.github.mstepan.kakafka.broker.core;
 
+import com.github.mstepan.kakafka.broker.utils.Preconditions;
 import java.util.Collection;
-import java.util.Objects;
 import java.util.Optional;
 
 public record MetadataState(String leaderBrokerName, Collection<LiveBroker> brokers) {
@@ -33,7 +33,7 @@ public record MetadataState(String leaderBrokerName, Collection<LiveBroker> brok
     }
 
     public Optional<LiveBroker> findBrokerById(String brokerIdToFind) {
-        Objects.requireNonNull(brokerIdToFind);
+        Preconditions.checkNotNull(brokerIdToFind, "null 'brokerIdToFind' parameter passed");
         for (LiveBroker broker : brokers) {
             if (brokerIdToFind.equals(broker.id())) {
                 return Optional.of(broker);

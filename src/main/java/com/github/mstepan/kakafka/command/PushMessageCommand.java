@@ -1,15 +1,15 @@
 package com.github.mstepan.kakafka.command;
 
 import com.github.mstepan.kakafka.broker.core.StringTopicMessage;
+import com.github.mstepan.kakafka.broker.utils.Preconditions;
 import com.github.mstepan.kakafka.io.DataIn;
 import com.github.mstepan.kakafka.io.DataOut;
-import java.util.Objects;
 
 public record PushMessageCommand(String topicName, int partitionsIdx, StringTopicMessage msg)
         implements Command {
 
     public PushMessageCommand {
-        Objects.requireNonNull(msg, "null 'msg' detected");
+        Preconditions.checkNotNull(msg, "null 'msg' detected");
     }
 
     public String getMsgKey() {

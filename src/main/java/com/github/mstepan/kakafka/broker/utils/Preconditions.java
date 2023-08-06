@@ -1,4 +1,4 @@
-package com.github.mstepan.kakafka.io;
+package com.github.mstepan.kakafka.broker.utils;
 
 public final class Preconditions {
 
@@ -16,5 +16,12 @@ public final class Preconditions {
         if (!condition) {
             throw new IllegalArgumentException(errorMsg);
         }
+    }
+
+    public static <T> T checkNotNull(T valueToCheckForNull, String errorMsg) {
+        if (valueToCheckForNull == null) {
+            throw new IllegalArgumentException(errorMsg);
+        }
+        return valueToCheckForNull;
     }
 }

@@ -1,9 +1,12 @@
 package com.github.mstepan.kakafka.broker.handlers;
 
+import static com.github.mstepan.kakafka.broker.BrokerMain.BROKER_NAME_MDC_KEY;
+
 import com.github.mstepan.kakafka.broker.BrokerContext;
 import com.github.mstepan.kakafka.broker.core.Either;
 import com.github.mstepan.kakafka.broker.core.topic.TopicInfo;
 import com.github.mstepan.kakafka.broker.utils.EtcdUtils;
+import com.github.mstepan.kakafka.broker.utils.Preconditions;
 import com.github.mstepan.kakafka.command.Command;
 import com.github.mstepan.kakafka.command.GetTopicInfoCommand;
 import com.github.mstepan.kakafka.command.response.GetTopicInfoCommandResponse;
@@ -14,15 +17,20 @@ import io.etcd.jetcd.kv.GetResponse;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelInboundHandlerAdapter;
 import io.netty.util.ReferenceCountUtil;
+import java.lang.invoke.MethodHandles;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.slf4j.MDC;
 
 public final class GetTopicInfoServerHandler extends ChannelInboundHandlerAdapter {
 
-    private final String brokerName;
+    private static final Logger LOG = LoggerFactory.getLogger(MethodHandles.lookup().lookupClass());
 
     private final BrokerContext brokerCtx;
 
-    public GetTopicInfoServerHandler(String brokerName, BrokerContext brokerCtx) {
-        this.brokerName = brokerName;
+    public GetTopicInfoServerHandler(BrokerContext brokerCtx) {
+        Preconditions.checkNotNull(brokerCtx, "null 'brokerCtx' detected");
+        Preconditions.checkNotNull(brokerCtx.config(), "null 'broker confix' detected");
         this.brokerCtx = brokerCtx;
     }
 
@@ -31,10 +39,13 @@ public final class GetTopicInfoServerHandler extends ChannelInboundHandlerAdapte
         Command command = (Command) msg;
 
         if (command instanceof GetTopicInfoCommand topicInfoCommand) {
+
+            MDC.put(BROKER_NAME_MDC_KEY, brokerCtx.config().brokerName());
+
             try {
-                System.out.printf(
-                        "[%s] 'get topic info' command received for topic '%s'%n",
-                        brokerName, topicInfoCommand.topicName());
+                LOG.info(
+                        "'get topic info' command received for topic '{}'",
+                        topicInfoCommand.topicName());
 
                 Either<TopicInfo> maybeTopicInfo = getTopicInfo(topicInfoCommand.topicName());
 
@@ -44,6 +55,7 @@ public final class GetTopicInfoServerHandler extends ChannelInboundHandlerAdapte
                     ctx.writeAndFlush(new GetTopicInfoCommandResponse(null, 500));
                 }
             } finally {
+                MDC.clear();
                 ReferenceCountUtil.release(msg);
             }
         } else {
@@ -52,7 +64,7 @@ public final class GetTopicInfoServerHandler extends ChannelInboundHandlerAdapte
     }
 
     @Override
-    public void exceptionCaught(ChannelHandlerContext ctx, Throwable ex) throws Exception {
+    public void exceptionCaught(ChannelHandlerContext ctx, Throwable ex) {
         ex.printStackTrace();
         ctx.close();
     }
