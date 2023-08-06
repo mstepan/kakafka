@@ -150,7 +150,8 @@ public final class BrokerMain {
                                     pipeline.addLast(
                                             "commandResponseEncoder", new CommandResponseEncoder());
 
-                                    pipeline.addLast("exitHandler", new ExitCommandServerHandler(brokerCtx));
+                                    pipeline.addLast(
+                                            "exitHandler", new ExitCommandServerHandler(brokerCtx));
 
                                     pipeline.addLast(
                                             "getMetadataHandler",

@@ -69,8 +69,7 @@ public final class ConsumeMessageServerHandler extends ChannelInboundHandlerAdap
     public void exceptionCaught(ChannelHandlerContext ctx, Throwable ex) {
         try (BrokerMdcPropagator notUsed = new BrokerMdcPropagator(brokerName)) {
             LOG.error("ConsumeMessage handler failed", ex);
-        }
-        finally {
+        } finally {
             ctx.close();
         }
     }

@@ -43,8 +43,7 @@ public final class ExitCommandServerHandler extends ChannelInboundHandlerAdapter
     public void exceptionCaught(ChannelHandlerContext ctx, Throwable ex) {
         try (BrokerMdcPropagator notUsed = new BrokerMdcPropagator(brokerName)) {
             LOG.error("Exit command handler failed", ex);
-        }
-        finally {
+        } finally {
             ctx.close();
         }
     }

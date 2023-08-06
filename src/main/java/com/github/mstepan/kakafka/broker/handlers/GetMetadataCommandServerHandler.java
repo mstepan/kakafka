@@ -51,8 +51,7 @@ public final class GetMetadataCommandServerHandler extends ChannelInboundHandler
     public void exceptionCaught(ChannelHandlerContext ctx, Throwable ex) {
         try (BrokerMdcPropagator notUsed = new BrokerMdcPropagator(brokerName)) {
             LOG.error("Exception during GetMetadataCommandServerHandler call", ex);
-        }
-        finally {
+        } finally {
             ctx.close();
         }
     }
