@@ -20,6 +20,7 @@
         <!-- 3rd party dependencies (sorted in alphabetical order) -->
         <apache.curator.version>5.5.0</apache.curator.version>
         <assertj.version>3.15.0</assertj.version>
+        <failsafe.plugin.version>3.1.2</failsafe.plugin.version>
         <jetcd.version>0.7.5</jetcd.version>
         <junit.bom.version>5.5.2</junit.bom.version>
         <logback.classic.version>1.4.9</logback.classic.version>
@@ -74,11 +75,20 @@
                 </configuration>
             </plugin>
 
-            <!-- Unit tests -->
+            <!-- Unit tests.
+            Will execute all tests with suffix '*Test' and skip all integration tests with
+            suffix '*IT'.
+            -->
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-surefire-plugin</artifactId>
                 <version>${surefire.plugin.version}</version>
+            </plugin>
+
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-failsafe-plugin</artifactId>
+                <version>${failsafe.plugin.version}</version>
             </plugin>
 
             <!--
@@ -175,5 +185,44 @@
             <scope>test</scope>
         </dependency>
     </dependencies>
+
+    <profiles>
+        <profile>
+            <id>integration-tests</id>
+            <activation>
+                <activeByDefault>false</activeByDefault>
+                <property>
+                    <!--
+                    To activate integration tests specify '-Dinteg' property during maven execution
+                    -->
+                    <name>integ</name>
+                </property>
+            </activation>
+            <build>
+                <plugins>
+                    <plugin>
+                        <groupId>org.apache.maven.plugins</groupId>
+                        <artifactId>maven-failsafe-plugin</artifactId>
+                        <executions>
+                            <execution>
+                                <id>integration-test</id>
+                                <phase>integration-test</phase>
+                                <goals>
+                                    <goal>integration-test</goal>
+                                </goals>
+                            </execution>
+                            <execution>
+                                <id>verify</id>
+                                <phase>verify</phase>
+                                <goals>
+                                    <goal>verify</goal>
+                                </goals>
+                            </execution>
+                        </executions>
+                    </plugin>
+                </plugins>
+            </build>
+        </profile>
+    </profiles>
 
 </project>

@@ -9,7 +9,7 @@ import com.github.mstepan.kakafka.command.response.GetTopicInfoCommandResponse;
 import java.util.Optional;
 import org.junit.jupiter.api.Test;
 
-final class GetTopicInfoIntTest {
+final class GetTopicInfoIT {
 
     @Test
     void getExistingTopicInfo() {

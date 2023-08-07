@@ -11,7 +11,7 @@ import com.github.mstepan.kakafka.command.response.MetadataCommandResponse;
 import java.util.Optional;
 import org.junit.jupiter.api.Test;
 
-final class GetMetadataIntTest {
+final class GetMetadataIT {
 
     @Test
     void getMetadataNormalCase() {

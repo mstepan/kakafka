@@ -37,12 +37,16 @@ To stop all running brokers execute:
 
 ## Unit/Integration tests.
 
-Right now we only have integration tests, so to run tests suites you should build application first and 
-then run brokers locally using `run.sh` script.
-
-To run tests just execute:
+To execute unit tests just run
 ```
 ./mvnw test
+```
+
+To run integration tests, you should build application first and then run brokers locally using `run.sh` script.
+
+To execute integration tests just run:
+```
+./mvnw verify -Dinteg
 ```
 
 

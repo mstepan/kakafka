@@ -10,7 +10,7 @@ import com.github.mstepan.kakafka.command.response.PushMessageCommandResponse;
 import java.util.Optional;
 import org.junit.jupiter.api.Test;
 
-final class PushMessageIntTest {
+final class PushMessageIT {
 
     @Test
     void pushMessageExistingTopic() {

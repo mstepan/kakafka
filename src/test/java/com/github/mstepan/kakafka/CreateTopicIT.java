@@ -12,7 +12,7 @@ import java.util.List;
 import java.util.Optional;
 import org.junit.jupiter.api.Test;
 
-final class CreateTopicIntTest {
+final class CreateTopicIT {
 
     @Test
     public void createNewTopic() {
